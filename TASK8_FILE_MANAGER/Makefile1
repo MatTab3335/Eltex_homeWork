@@ -1,0 +1,13 @@
+all: curses
+
+curses: curses.o cur_functions.o
+	gcc curses.o cur_functions.o -o curses -lncurses
+
+curses.o: curses.c
+	gcc -c curses.c
+
+cur_functions.o: cur_functions.c
+	gcc -c cur_functions.c
+
+clean:
+	rm -rf *.0 curses
