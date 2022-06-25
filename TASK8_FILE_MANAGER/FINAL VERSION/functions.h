@@ -1,12 +1,35 @@
 #ifndef _FUNCTIONS_H_
 #define _FUNCTIONS_H_
 
+//--------CURSES-------
+#include <termios.h>
+#include <sys/ioctl.h>
+#include <signal.h>
+#include <stdlib.h>
+#include <curses.h>
+
+void windows_init();
+void windows_del();
+void windows_resize();
+void windows_refresh();
+void sig_winch(int signo);
+
+extern int maxx;
+extern int maxy;
+
+extern WINDOW * name_field;
+extern WINDOW * sub_name_field;
+extern WINDOW * size_field;
+extern WINDOW * sub_size_field;
+extern WINDOW * date_field;
+extern WINDOW * sub_date_field;
+
+//--------MANAGER-----------
 #include <stdio.h>
 #include <sys/types.h> /* определения типов */
 #include <dirent.h>
 #include <sys/stat.h>   /* структура, возвращаемая stat */
 #include <string.h>
-#include <stdlib.h>
 #include <sys/syscall.h>
 #include <fcntl.h>      /* флажки чтения и записи */
 #include <malloc.h>
@@ -22,9 +45,10 @@ extern char **path_list;
 
 void allocate();
 void free_mem();
-void print_names(char *name);
+void print_names();
 void dirwalk(char *dir);
 char **resize_list(char **list);
 void empty_stdin();
+
 
 #endif

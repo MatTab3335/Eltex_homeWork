@@ -1,10 +1,10 @@
 all: manager
 
-manager: main.o functions.o
-	gcc main.o functions.o -o manager
+manager: manager.o functions.o
+	gcc manager.o functions.o -o manager
 
-main.o: main.c
-	gcc -c main.c
+main.o: manager.c
+	gcc -c manager.c
 
 functions.o: functions.c
 	gcc -c functions.c

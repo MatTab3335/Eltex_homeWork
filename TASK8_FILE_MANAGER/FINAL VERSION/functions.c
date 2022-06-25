@@ -5,6 +5,16 @@ int prev_nfiles = 0;
 char **name_list;
 char **path_list;
 
+int maxx;
+int maxy;
+
+WINDOW * name_field;
+WINDOW * sub_name_field;
+WINDOW * size_field;
+WINDOW * sub_size_field;
+WINDOW * date_field;
+WINDOW * sub_date_field;
+
 void allocate() 
 {
     //-------Allocate memory---------
@@ -43,7 +53,7 @@ void empty_stdin()
         c = getchar();
     } while (c != '\n' && c != EOF);
 }
-void print_names(char *name)
+void print_names()
 {
     struct stat stbuf;
     if (stat(name, &stbuf) == -1) {
@@ -54,7 +64,6 @@ void print_names(char *name)
 }
 void dirwalk(char *dir)
 {
-//	printf("Im in dirwalk\n");
     char path[MAX_PATH];
     char name[MAX_NAME];
     nfiles = 0;
@@ -68,7 +77,7 @@ void dirwalk(char *dir)
     }
     while ((dp = readdir(dfd)) != NULL) {
         if (strcmp(dp->d_name, ".") == 0 )
-            continue;                          //пропустить себя и родителя
+            continue;                          //пропустить себя
         if (strlen(dir) + strlen(dp->d_name) + 2 > sizeof(path))
             fprintf(stderr, "dirwalk: слишком длинное имя %s/%s\n", 
                 dir, dp->d_name);
@@ -76,7 +85,6 @@ void dirwalk(char *dir)
             nfiles++;
             sprintf(path, "%s/%s", dir, dp->d_name);
             strcpy(name, dp->d_name);
-            printf("%s\n", name);
             name_list = resize_list(name_list);
             strcpy(name_list[nfiles - 1], name);
             path_list = resize_list(path_list);
@@ -103,4 +111,64 @@ char **resize_list(char **list)
             free(name_list[i]);
     }
     return list;  
+}
+
+void sig_winch(int signo)
+{
+	struct winsize size;
+	ioctl(fileno(stdout), TIOCGWINSZ, (char *) &size);
+	resizeterm(size.ws_row, size.ws_col);
+	maxx = size.ws_col;
+	maxy = size.ws_row;
+	windows_resize();
+	windows_refresh();
+}
+void windows_init()
+{
+	initscr();
+	signal(SIGWINCH, sig_winch);
+	cbreak();
+	getmaxyx(stdscr, maxy, maxx);
+	curs_set(FALSE);
+	start_color();
+	refresh();
+	init_pair(1, COLOR_YELLOW, COLOR_BLUE);
+	init_pair(2, COLOR_WHITE, COLOR_BLUE);
+	attron(COLOR_PAIR(1) | A_BOLD);
+//--------------NAME FIELD--------------------
+	name_field = newwin(maxy, maxx, 0, 0);
+	wbkgd(name_field, COLOR_PAIR(2));
+	box(name_field, '|', '-');
+
+	sub_name_field = derwin(name_field, maxy - 5, maxx - 5, 1, 2);
+	keypad(sub_name_field, true);
+	wbkgd(sub_name_field, COLOR_PAIR(2) | A_BOLD);
+
+	getmaxyx(stdscr, maxy, maxx);
+	wprintw(sub_name_field, "%i, %i\n", maxy, maxx);
+	wrefresh(sub_name_field);
+	wrefresh(name_field);
+}
+
+void windows_del()
+{
+	delwin(sub_name_field);
+	delwin(name_field);
+}
+void windows_resize()
+{
+	wclear(name_field);
+	wclear(sub_name_field);
+	wresize(name_field, maxy, maxx);
+	wresize(sub_name_field, maxy - 5, maxx - 5);
+	box(name_field, '|', '-');
+	wrefresh(name_field);
+	wrefresh(sub_name_field);
+	
+}
+void windows_refresh()
+{
+	//wprintw(sub_name_field, "%i, %i\n", maxy, maxx);
+	wrefresh(sub_name_field);
+	wrefresh(name_field);
 }
