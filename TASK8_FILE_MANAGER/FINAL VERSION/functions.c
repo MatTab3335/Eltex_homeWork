@@ -7,6 +7,11 @@ char **path_list;
 
 int maxx;
 int maxy;
+int key;
+int highlight = 1;
+int print_start = 0;
+char cur_dir[MAX_PATH];
+char prev_dir[MAX_PATH];
 
 WINDOW * name_field;
 WINDOW * sub_name_field;
@@ -55,12 +60,12 @@ void empty_stdin()
 }
 void print_names()
 {
-    struct stat stbuf;
+    /*struct stat stbuf;
     if (stat(name, &stbuf) == -1) {
         fprintf(stderr, "print_names: нет доступа к %s\n", name);
         return;
     }
-    printf("%s\n", name);
+    printf("%s\n", name);*/
 }
 void dirwalk(char *dir)
 {
@@ -76,8 +81,8 @@ void dirwalk(char *dir)
         return;
     }
     while ((dp = readdir(dfd)) != NULL) {
-        if (strcmp(dp->d_name, ".") == 0 )
-            continue;                          //пропустить себя
+        if (strcmp(dp->d_name, ".") == 0)
+            continue;                          //пропустить себя и родителя
         if (strlen(dir) + strlen(dp->d_name) + 2 > sizeof(path))
             fprintf(stderr, "dirwalk: слишком длинное имя %s/%s\n", 
                 dir, dp->d_name);
@@ -121,6 +126,7 @@ void sig_winch(int signo)
 	maxx = size.ws_col;
 	maxy = size.ws_row;
 	windows_resize();
+    print(print_start);
 	windows_refresh();
 }
 void windows_init()
@@ -140,12 +146,12 @@ void windows_init()
 	wbkgd(name_field, COLOR_PAIR(2));
 	box(name_field, '|', '-');
 
-	sub_name_field = derwin(name_field, maxy - 5, maxx - 5, 1, 2);
+	sub_name_field = derwin(name_field, maxy - 1, maxx - 1, 0, 1);
 	keypad(sub_name_field, true);
-	wbkgd(sub_name_field, COLOR_PAIR(2) | A_BOLD);
+	wbkgd(sub_name_field, COLOR_PAIR(2));
 
 	getmaxyx(stdscr, maxy, maxx);
-	wprintw(sub_name_field, "%i, %i\n", maxy, maxx);
+	//wprintw(sub_name_field, "%i, %i\n", maxy, maxx);
 	wrefresh(sub_name_field);
 	wrefresh(name_field);
 }
@@ -154,16 +160,16 @@ void windows_del()
 {
 	delwin(sub_name_field);
 	delwin(name_field);
+    endwin();
 }
 void windows_resize()
 {
 	wclear(name_field);
 	wclear(sub_name_field);
 	wresize(name_field, maxy, maxx);
-	wresize(sub_name_field, maxy - 5, maxx - 5);
+	wresize(sub_name_field, maxy - 1, maxx - 1);
 	box(name_field, '|', '-');
-	wrefresh(name_field);
-	wrefresh(sub_name_field);
+    refresh();
 	
 }
 void windows_refresh()
@@ -171,4 +177,22 @@ void windows_refresh()
 	//wprintw(sub_name_field, "%i, %i\n", maxy, maxx);
 	wrefresh(sub_name_field);
 	wrefresh(name_field);
+}
+void print(int start)
+{
+    int row = 0;
+    wclear(sub_name_field);
+    wattron(sub_name_field, COLOR_PAIR(1) | A_BOLD);
+    mvwprintw(sub_name_field, 1, 1, "CURRENT DIRECTORY: %s; Files: %i",cur_dir, nfiles);
+    wattroff(sub_name_field, A_BOLD);
+    wattron(sub_name_field, COLOR_PAIR(2));
+ //   mvwprintw(sub_name_field, 1, 50, "n = %i; s = %i; y = %i; h = %i", nfiles, start, maxy, highlight);
+    for (int i = start; i < nfiles; i++) {
+            if (row == highlight - 1)
+                wattron(sub_name_field, A_REVERSE);
+            mvwprintw(sub_name_field, row + 2, 1, name_list[i]);
+            wattroff(sub_name_field, A_REVERSE);
+            row++;
+    }
+    windows_refresh();
 }
