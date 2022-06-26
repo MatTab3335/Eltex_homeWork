@@ -81,7 +81,7 @@ void dirwalk(char *dir)
         return;
     }
     while ((dp = readdir(dfd)) != NULL) {
-        if (strcmp(dp->d_name, ".") == 0)
+        if (strcmp(dp->d_name, ".") == 0 || strcmp(dp->d_name, "..") == 0)
             continue;                          //пропустить себя и родителя
         if (strlen(dir) + strlen(dp->d_name) + 2 > sizeof(path))
             fprintf(stderr, "dirwalk: слишком длинное имя %s/%s\n", 

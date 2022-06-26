@@ -13,7 +13,7 @@ int main()
     dirwalk(cur_dir);
     
     while(1) {
-        char temp[MAX_PATH];
+        char temp[MAX_PATH] = {};
         int i = 0;
         int remove = 0;
         print(print_start);
@@ -56,7 +56,7 @@ int main()
                 }
                 strncpy(temp, cur_dir, strlen(cur_dir) - (size_t)remove);
                 strcpy(cur_dir, temp);
-                dirwalk("home/matvey");
+                dirwalk(cur_dir);
                 highlight = 1;
                 print_start = 0;
                 break;
