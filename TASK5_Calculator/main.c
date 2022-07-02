@@ -1,18 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include "functions.h"
-
-int a = 0;
-int b = 0; 
-char command;
-char integer[11];
-
-void empty_stdin() {
-    int c;
-    do {
-        c = getchar();
-    } while (c != '\n' && c != EOF);
-}
 
 int main()
 {
@@ -21,9 +7,12 @@ int main()
         printf("List of commands:\n");
         printf("'+' - add two numbers;\n'-' - subtract two numbers;\n");
         printf("'*' - multiply two numbers;\n'/' - divide two numbers;\n");
+        printf("'q' - to quit\n");
         printf("Your command: ");
         command = getchar();
         empty_stdin();
+        if (command == 'q')
+            return 0;
         printf("Enter first number: ");
         fgets(integer, 11, stdin);
         a = atoi(integer);
@@ -38,7 +27,7 @@ int main()
                 break;
             case 42: printf("%i * %i = %i", a, b, multiply(a, b));
                 break;
-            case 47: printf("%i / %i = %f", a, b, divide(a, b));
+            case 47: printf("%i / %i = %lf", a, b, divide(a, b));
                 break;
         }
     }

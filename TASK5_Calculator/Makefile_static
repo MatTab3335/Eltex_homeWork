@@ -1,0 +1,3 @@
+ar rc libfunctions.a functions.o
+ranlib libfunctions.a
+gcc main.c -L. -lfunctions -o Calculator_static
