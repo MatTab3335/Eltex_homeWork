@@ -1,6 +1,5 @@
 #ifndef _FUNCTIONS_H_
 #define _FUNCTIONS_H_
-
 //--------CURSES-------
 #include <termios.h>
 #include <sys/ioctl.h>

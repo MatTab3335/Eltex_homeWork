@@ -16,6 +16,7 @@ char prev_dir[MAX_PATH];//пред. директория
 WINDOW * name_field;        //основное окно
 WINDOW * sub_name_field;    //внутреннее окно для отображения текста
 
+
 void allocate() 
 {
     //-------Allocate memory---------
