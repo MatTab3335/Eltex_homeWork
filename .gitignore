@@ -1,3 +1,7 @@
 *.o
 *.out
 fork
+task10
+task11
+test
+test.c
