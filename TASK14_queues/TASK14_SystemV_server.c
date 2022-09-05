@@ -7,7 +7,7 @@
 #include <sys/ipc.h>
 #include <sys/msg.h>
 
-#define SERVER_KEY_PATHNAME "path"
+#define SERVER_KEY_PATHNAME "/tmp/mqueue_server_key"
 #define PROJECT_ID 'A'
 #define QUEUE_PERMISSIONS 0660      //-rw
 
@@ -47,6 +47,7 @@ int main ()
         }
 
         printf ("Server: message received.\n");
+        printf("Received message: %s\n", message.message_text.buf);
 
         int client_qid = message.message_text.qid;
         message.message_text.qid = myqid;
@@ -58,7 +59,7 @@ int main ()
         }
         printf ("Server: response sent to client.\n");
 
-        if (!strcmp(message.message_text, "close") break;               
+        if (!strcmp(message.message_text.buf, "close")) break;               
     }
     if (msgctl (myqid, IPC_RMID, NULL) == -1) {
         perror ("server: msgctl");

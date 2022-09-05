@@ -7,7 +7,7 @@
 #include <sys/ipc.h>
 #include <sys/msg.h>
 
-#define SERVER_KEY_PATHNAME "path"
+#define SERVER_KEY_PATHNAME "/tmp/mqueue_server_key"
 #define PROJECT_ID 'A'
 
 struct message_text {
@@ -68,7 +68,7 @@ int main (int argc, char **argv)
         // process return message from server
         printf ("Message from server: %s\n\n", return_message.message_text.buf);  
 
-        if (!strcmp(message.message_text, "close")    
+        if (!strcmp(my_message.message_text.buf, "close"))    
             break;            
         printf ("Enter a new message: ");
     }

@@ -1,7 +1,11 @@
-*.o
-*.out
-fork
-task10
-task11
-test
-test.c
+# Ignore everything
+*
+
+# But not these files...
+!.gitignore
+*.c
+*.h
+# etc...
+
+# ...even if they are in subdirectories
+!*/

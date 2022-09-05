@@ -19,6 +19,7 @@ int main (int argc, char **argv)
     struct mq_attr attr;
     char in_buffer [MSG_BUFFER_SIZE];
     char out_buffer [MSG_BUFFER_SIZE];
+    char client_info [MSG_BUFFER_SIZE];
 
     printf ("Server: I'm server!\n");
 
@@ -32,6 +33,13 @@ int main (int argc, char **argv)
         exit (1);
     }
     
+    // get the client descriptor
+    if (mq_receive (qdes_server, in_buffer, MSG_BUFFER_SIZE, NULL) == -1) {
+        perror ("Server: mq_receive");
+        exit (1);
+    }
+    strcpy (client_info, in_buffer);
+
     while (1) {
         // get the oldest message with highest priority
         if (mq_receive (qdes_server, in_buffer, MSG_BUFFER_SIZE, NULL) == -1) {
@@ -40,21 +48,37 @@ int main (int argc, char **argv)
         }
 
         printf ("Server: message received.\n");
+        printf ("Received message: %s", in_buffer);
 
         // send reply message to client
-        if ((qdes_client = mq_open (in_buffer, O_WRONLY)) == 1) {
+        if ((qdes_client = mq_open (client_info, O_WRONLY)) == 1) {
             perror ("Server: Not able to open client queue");
             continue;
         }
 
-        sprintf (out_buffer, "%i", token_number);
+        strcpy (out_buffer, in_buffer);
+        printf ("Server send message: %s", out_buffer);
 
         if (mq_send (qdes_client, out_buffer, strlen (out_buffer) + 1, 0) == -1) {
             perror ("Server: Not able to send message to client");
             continue;
         }
 
-        printf ("Server: response sent to client.\n");
-        token_number++;
+        printf ("Server: response sent to client.\n\n");
+
+        if (!strcmp(in_buffer, "close\n"))    
+            break;
     }
+
+    if (mq_close (qdes_server) == -1) {
+        perror ("Server: mq_close");
+        exit (1);
+    }
+
+    printf ("Server: Queue is closed\n");
+    if (mq_unlink (SERVER_QUEUE_NAME) == -1) {
+        perror ("Server: mq_unlink");
+        exit (1);
+    }
+    printf ("Server: Queue is removed\n");
 }

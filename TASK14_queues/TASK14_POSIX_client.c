@@ -19,7 +19,7 @@ int main (int argc, char **argv)
     mqd_t qdes_server, qdes_client;   // queue descriptors
     struct mq_attr attr;
     char in_buffer [MSG_BUFFER_SIZE];
-    char temp_buf [10];
+    char temp_buf [MSG_BUFFER_SIZE];
 
     attr.mq_flags = 0;
     attr.mq_maxmsg = MAX_MESSAGES;
@@ -39,12 +39,18 @@ int main (int argc, char **argv)
         exit (1);
     }
 
-    printf ("Ask for a token (Press <ENTER>): ");
+    // send info about myself to server
+    if (mq_send (qdes_server, client_queue_name, strlen (client_queue_name) + 1, 0) == -1) {
+        perror ("Client: Not able to send message to server");
+        exit(1);
+    }
 
-    while (fgets (temp_buf, 2, stdin)) {
+    printf ("Enter a message: ");
+
+    while (fgets (temp_buf, MSG_BUFFER_SIZE, stdin)) {
 
         // send message to server
-        if (mq_send (qdes_server, client_queue_name, strlen (client_queue_name) + 1, 0) == -1) {
+        if (mq_send (qdes_server, temp_buf, strlen (temp_buf) + 1, 0) == -1) {
             perror ("Client: Not able to send message to server");
             continue;
         }
@@ -55,9 +61,12 @@ int main (int argc, char **argv)
             exit (1);
         }
         // display token received from server
-        printf ("Client: Token received from server: %s\n\n", in_buffer);
+        printf ("Client: Message received from server: %s\n\n", in_buffer);
 
-        printf ("Ask for a token (Press ): ");
+        if (!strcmp(in_buffer, "close\n"))    
+            break;
+
+        printf ("Enter a message: ");
     }
 
 
@@ -65,12 +74,13 @@ int main (int argc, char **argv)
         perror ("Client: mq_close");
         exit (1);
     }
+    printf ("Client: Queue is closed\n");
 
     if (mq_unlink (client_queue_name) == -1) {
         perror ("Client: mq_unlink");
         exit (1);
     }
-    printf ("Client: finished\n");
+    printf ("Client: Queue is removed\n");
 
     exit (0);
 }
