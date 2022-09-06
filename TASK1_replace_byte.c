@@ -1,5 +1,6 @@
 #include <stdio.h>
 
+
 int origin = 0xFAFAFAFA; //11111010 11111010 11111010 11111010
 int byte;
 
