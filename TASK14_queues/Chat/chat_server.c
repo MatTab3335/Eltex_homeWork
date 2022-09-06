@@ -23,8 +23,8 @@
     *
 */                  
 void process_msgs (void);
-void del_el_double_ar (char **, char *, int);
-void del_el_mqd_t (mqd_t *, int, int);
+int del_el_double_ar (char array[][MSG_BUFFER_SIZE], char *element, int size);
+void del_el_mqd_t (int *array, int idx, int size);
 
 mqd_t qdes_server, qdes_client[MAX_CLIENTS];   // queue descriptors
 struct mq_attr attr;
@@ -112,22 +112,22 @@ int main (int argc, char **argv)
 
     exit (0);
 }
-int del_el_double_ar (char **array, char *element, int size)
+int del_el_double_ar (char array[][MSG_BUFFER_SIZE], char *element, int size)
 {
     int i = 0;
     for (i = 0; i < size; i++) {
-        if (!strcmp (&array[i], element)) {
-            if (i == size -1) memset (&array[i], 0, strlen (&array[i]));
+        if (!strcmp (array[i], element)) {
+            if (i == size -1) memset (array[i], 0, strlen (array[i]));
             else {
                 for (int y = i; y < size - 1; y++)
-                    strcpy (&array[y], &array[y + 1]);
-                memset (&array[size - 1], 0, strlen (&array[size - 1]));
+                    strcpy (array[y], array[y + 1]);
+                memset (array[size - 1], 0, strlen (array[size - 1]));
             }
             return i;
         }
     }
 }
-void del_el_mqd_t (mqd_t *array, int idx, int size)
+void del_el_mqd_t (int *array, int idx, int size)
 {
     if (idx == size - 1) array[idx] = 0;
     else {
@@ -141,7 +141,7 @@ void process_msgs ()
 {
     char temp[MAX_MSG_SIZE];
     char msg[MAX_MSG_SIZE];
-    char name[MAX_MSG_SIZE];
+    char name[128];
     char cmd[128];
     char arg[128];
     char *token;                 //to store tokens of string
@@ -167,7 +167,7 @@ void process_msgs ()
                 token = strtok (NULL, " ");
                 p++;
             }
-            if (if perm_to_join && !strcmp ("add_user\n", cmd)) {
+            if (perm_to_join && !strcmp ("add_user\n", cmd)) {
                 strcpy(clients_info[++ n_of_client], arg);
                 printf("User %s has joined the chat!\n", clients_info[n_of_client]);
 
@@ -197,7 +197,10 @@ void process_msgs ()
                 token = strtok (NULL, "*");
                 p++;
             }
-            sprintf(out_buffer, "%s: %s", name, msg);
+
+            char temp1[strlen(msg)];
+            strcpy (temp1, msg);
+            sprintf(out_buffer, "%s: %s", name, temp1);
             printf("Message: %s", out_buffer);
 
             //-----Send to all users-----
