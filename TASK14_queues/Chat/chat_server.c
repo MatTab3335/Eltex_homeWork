@@ -1,3 +1,6 @@
+//при лишнем юзере отправить ему сообщение, чтобы он закрыл канал и закрылся сам
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,7 +17,7 @@
 #define MAX_MESSAGES 10
 #define MAX_MSG_SIZE 256
 #define MSG_BUFFER_SIZE MAX_MSG_SIZE + 10
-#define MAX_CLIENTS 10
+#define MAX_CLIENTS 2
 
 //Template for regular msgs: "clients_queue_name*message"
 /*Template for service msgs:   
@@ -109,7 +112,7 @@ void refresh_clients()
     send_to_all("/cmd refresh_clients");
     send_to_all(integer);
 
-    for (int i = 0; i < MAX_CLIENTS; i++)
+    for (int i = 0; i < n_of_client; i++)
         send_to_all(clients_info[i]);
     
     send_to_all("/cmd end_refresh_clients");
@@ -125,35 +128,40 @@ void process_msgs ()
     char perm_to_join = 1;
 
     while(1) {
+        int p = 0;      //to operate tokens of string
         
         if (mq_receive (qdes_server, temp, MSG_BUFFER_SIZE, NULL) == -1) {
             perror ("Server: mq_receive");
             exit (1);
         }
-        printf ("Received message: %s", temp);
+        printf ("[MSG]: %s\n", temp);
         //if receives service message
-        if (!strncmp ("/cmd ", temp, 5)) {
+        if (!strncmp ("/cmd", temp, 4)) {
+            // printf("Get cmd msg!\n");
             token = strtok (temp, " ");
             //split cmd and args
             while (token != NULL) {
-                static int p = 0;
                 switch (p) {
-                  case 0: break;
+                  default: break;
                   case 1: strcpy (cmd, token);
                   case 2: strcpy (arg, token);  
                 } 
                 token = strtok (NULL, " ");
                 p++;
             }
+            p = 0;
+            // printf("cmd = %s\n", cmd);
+            // printf("arg = %s\n", arg);
             //----Add user----
-            if (perm_to_join && !strcmp ("add_user\n", cmd)) {
-                strcpy(clients_info[++ n_of_client], arg);
+            if (perm_to_join == 1 && !strcmp ("add_user", cmd)) {
+                strcpy(clients_info[n_of_client], arg);
                 printf("User %s has joined the chat!\n", clients_info[n_of_client]);
                 // get clients descriptor
                 if ((qdes_client[n_of_client] = mq_open (clients_info[n_of_client], O_WRONLY)) == 1) {
                     perror ("Server: Not able to open client queue");
                     continue;
                 }
+                n_of_client++;
                 //---refresh list of clients in clients---
                 refresh_clients();
             }
@@ -166,15 +174,14 @@ void process_msgs ()
                 refresh_clients();
             }
             //----check number of clients----
-            if (n_of_client >= 10) {
-                printf("Number of client > %i. New user can't join\n", MAX_CLIENTS);
+            if (n_of_client >= MAX_CLIENTS) {
+                printf("Number of clients > %i. New user can't join\n", MAX_CLIENTS);
                 perm_to_join = 0;
-            } else perm_to_join = 1;    
+            } else perm_to_join = 1;  
         } else {                            //if regular message
             //split name and message
             token = strtok (temp, "*");
             while (token != NULL) {
-                static int p = 0;
                 if (p == 0) 
                     strcpy (name, token);
                 else 
@@ -182,14 +189,17 @@ void process_msgs ()
                 token = strtok (NULL, "*");
                 p++;
             }
+            p = 0;
+            // printf("name = %s\n", name);
+            // printf("msg = %s\n", msg);
             //----make out message----
             char temp1[strlen(msg)];
             strcpy (temp1, msg);
             sprintf(out_buffer, "%s: %s", name, temp1);
-            printf("Message: %s", out_buffer);
+            // printf("Message: %s\n", out_buffer);
             //-----Send to all users-----
             send_to_all(out_buffer);
-            printf ("Server: responses sent to client.\n\n");
+            //memset (temp, 0, strlen (temp));
         }
     }       
 }
