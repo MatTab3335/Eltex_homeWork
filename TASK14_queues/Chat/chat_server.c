@@ -1,9 +1,9 @@
 //при лишнем юзере отправить ему сообщение, чтобы он закрыл канал и закрылся сам
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -25,12 +25,15 @@
     * "/cmd del_user username" - in/out msg
     * "/cmd refresh_clients" - output msg
     * "/cmd end_refresh_clients" - output msg
+    * "/cmd close" - output (close extra client_)
 */                  
 void process_msgs (void);
 int del_el_double_ar (char array[][MSG_BUFFER_SIZE], char *element, int size);
 void del_el_mqd_t (int *array, int idx, int size);
 void send_to_all(char *out_buffer);
 void refresh_clients();
+void close_myself();
+void SignalHandler(int signal);
 
 mqd_t qdes_server, qdes_client[MAX_CLIENTS];   // queue descriptors
 struct mq_attr attr;
@@ -48,6 +51,11 @@ int main (int argc, char **argv)
     attr.mq_msgsize = MAX_MSG_SIZE;
     attr.mq_curmsgs = 0;
 
+    //----register signals----
+    signal(SIGABRT, SignalHandler);
+    signal(SIGINT, SignalHandler);
+    signal(SIGTERM, SignalHandler)
+
     //create server queue
     if ((qdes_server = mq_open (SERVER_QUEUE_NAME, O_RDONLY | O_CREAT, QUEUE_PERMISSIONS, &attr)) == -1) {
         perror ("Server: mq_open (server)");
@@ -56,18 +64,7 @@ int main (int argc, char **argv)
     while (1)
         process_msgs();
     
-
-    if (mq_close (qdes_server) == -1) {
-        perror ("Server: mq_close");
-        exit (1);
-    }
-
-    printf ("Server: Queue is closed\n");
-    if (mq_unlink (SERVER_QUEUE_NAME) == -1) {
-        perror ("Server: mq_unlink");
-        exit (1);
-    }
-    printf ("Server: Queue is removed\n");
+    close_myself();
 
     exit (0);
 }
@@ -85,6 +82,7 @@ int del_el_double_ar (char array[][MSG_BUFFER_SIZE], char *element, int size)
             return i;
         }
     }
+    return -1;
 }
 void del_el_mqd_t (int *array, int idx, int size)
 {
@@ -152,7 +150,7 @@ void process_msgs ()
             p = 0;
             // printf("cmd = %s\n", cmd);
             // printf("arg = %s\n", arg);
-            //----Add user----
+            //----ADD user----
             if (perm_to_join == 1 && !strcmp ("add_user", cmd)) {
                 strcpy(clients_info[n_of_client], arg);
                 printf("User %s has joined the chat!\n", clients_info[n_of_client]);
@@ -165,13 +163,22 @@ void process_msgs ()
                 //---refresh list of clients in clients---
                 refresh_clients();
             }
-            //----Delete user----
+            //----if clients buffer is full - send cmd to close new user
+            else if (perm_to_join == 0 && !strcmp ("add_user", cmd))
+                if (mq_send (arg, "/cmd close", strlen ("/cmd close") + 1, 0) == -1) {
+                    perror ("Server: Not able to send message to client");
+                    continue;
+                }
+            //----DELETE user----
             else if (!strcmp ("del_user\n", cmd)) {
-                int idx = del_el_double_ar(clients_info, arg, n_of_client);
-                del_el_mqd_t(qdes_client, idx, n_of_client);
-                printf("User %s has left the chat!\n", arg);
-                n_of_client --;
-                refresh_clients();
+                int idx = 0;
+                // if this user exists in list
+                if ((idx = del_el_double_ar(clients_info, arg, n_of_client)) >= 0) {
+                    del_el_mqd_t(qdes_client, idx, n_of_client);
+                    printf("User %s has left the chat!\n", arg);
+                    n_of_client --;
+                    refresh_clients();
+                }
             }
             //----check number of clients----
             if (n_of_client >= MAX_CLIENTS) {
@@ -202,4 +209,26 @@ void process_msgs ()
             //memset (temp, 0, strlen (temp));
         }
     }       
+}
+void close_myself()
+{
+    if (mq_close (qdes_server) == -1) {
+        perror ("Server: mq_close");
+        exit (1);
+    }
+    printf ("Client: Queue is closed\n");
+
+    if (mq_unlink (qdes_server) == -1) {
+        perror ("Server: mq_unlink");
+        exit (1);
+    }
+    printf ("Server: Queue is removed\n");
+}
+void SignalHandler(int signal)
+{
+    //tell clients to close
+    send_to_all("/cmd close");
+    close_myself();
+    printf("Server is closed\n");
+    signal(signal, SIG_DFL);    //call default function
 }

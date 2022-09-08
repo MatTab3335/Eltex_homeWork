@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -23,18 +24,20 @@ void del_el_mqd_t (int *array, int idx, int size);
 void *send_msg(void *args);
 void *get_msg(void *args);
 void empty_stdin(void);
+void close_myself(void);
+void SignalHandler(int signal);
 
 //Template for regular msgs: "clients_queue_name*message"
 /*Template for service msgs:   
     * "/cmd add_user username" - output msg
     * "/cmd del_user username" - output msg
     * "/cmd refresh_clients" - input msg
+    * "/cmd close" - input - close myself
 */
 mqd_t qdes_server, my_qdes;   // queue descriptors
 char my_queue_name [64];
 char in_buffer [MSG_BUFFER_SIZE];
 char out_buffer [MSG_BUFFER_SIZE];
-
 char del_cmd [MSG_BUFFER_SIZE];
 char add_cmd [MSG_BUFFER_SIZE];
 char perm_flag = 1;
@@ -43,11 +46,13 @@ int n_of_clients = MAX_CLIENTS;
 
 int main (int argc, char **argv)
 {
-    
-    
     struct mq_attr attr;
     pthread_t thr_send, thr_get;
     int *ret_val;
+    //----register signals----
+    signal(SIGABRT, SignalHandler);
+    signal(SIGINT, SignalHandler);
+    signal(SIGTERM, SignalHandler);
 
     attr.mq_flags = 0;
     attr.mq_maxmsg = MAX_MESSAGES;
@@ -82,17 +87,7 @@ int main (int argc, char **argv)
     pthread_join(thr_get, (void **) &ret_val);
     pthread_join(thr_send, (void **) &ret_val);
     //----close mqueue----
-    if (mq_close (my_qdes) == -1) {
-        perror ("Client: mq_close");
-        exit (1);
-    }
-    printf ("Client: Queue is closed\n");
-
-    if (mq_unlink (my_queue_name) == -1) {
-        perror ("Client: mq_unlink");
-        exit (1);
-    }
-    printf ("Client: Queue is removed\n");
+    close_myself();
 
     exit (0);
 }
@@ -132,7 +127,10 @@ void *get_msg(void *args)
             for (int i = 0; i < n_of_clients; i++)
                 printf ("%s, ", clients_info[i]);
             printf("\n");
-        }    
+        }
+        // if server tell me close - close  
+        else if (!strncmp(in_buffer, "/cmd close", 10)) 
+            close_myself(); 
     }
 }
 void *send_msg(void *args)
@@ -192,4 +190,27 @@ void empty_stdin()
     do {
         c = getchar();
     } while (c != '\n' && c != EOF);
+}
+void close_myself()
+{
+    if (mq_close (my_qdes) == -1) {
+        perror ("Client: mq_close");
+        exit (1);
+    }
+    printf ("Client: Queue is closed\n");
+
+    if (mq_unlink (my_queue_name) == -1) {
+        perror ("Client: mq_unlink");
+        exit (1);
+    }
+    printf ("Client: Queue is removed\n");
+}
+void SignalHandler(int signal)
+{
+    //tell server to remove me from user list
+    if (mq_send (qdes_server, del_cmd, strlen (del_cmd) + 1, 0) == -1)
+            perror ("Client: Not able to send message to server");
+    close_myself();
+    printf("Client is closed\n");
+    signal(signal, SIG_DFL);    //call default function
 }
