@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,6 +9,8 @@
 #include <fcntl.h>
 #include <mqueue.h>
 #include <pthread.h>
+
+#include "windows.h"
 
 #define SERVER_QUEUE_NAME   "/server_chat"
 #define QUEUE_PERMISSIONS 0660      //-rw
@@ -33,17 +34,19 @@ void send_to_all(char *out_buffer);
 void refresh_clients();
 void close_myself();
 void SignalHandler(int signal);
+void printClients();
 
 mqd_t qdes_server, qdes_client[MAX_CLIENTS];   // queue descriptors
 struct mq_attr attr;
-char in_buffer [MSG_BUFFER_SIZE] = {};
 char out_buffer [MSG_BUFFER_SIZE] = {};
 char clients_info [MAX_CLIENTS][MSG_BUFFER_SIZE] = {};
 int n_of_client = 0;
 
 int main (int argc, char **argv)
 {
-    printf ("Server: I'm server!\n");
+    windows_init();
+
+    // printf ("Server: I'm server!\n");
 
     attr.mq_flags = 0;
     attr.mq_maxmsg = MAX_MESSAGES;
@@ -51,9 +54,7 @@ int main (int argc, char **argv)
     attr.mq_curmsgs = 0;
 
     //----register signals----
-    signal(SIGABRT, SignalHandler);
     signal(SIGINT, SignalHandler);
-    signal(SIGTERM, SignalHandler);
 
     //create server queue
     if ((qdes_server = mq_open (SERVER_QUEUE_NAME, O_RDONLY | O_CREAT, QUEUE_PERMISSIONS, &attr)) == -1) {
@@ -116,6 +117,7 @@ void refresh_clients()
 }
 void process_msgs ()
 {
+    char in_buffer [MSG_BUFFER_SIZE] = {};
     char temp[MAX_MSG_SIZE];
     char msg[MAX_MSG_SIZE];
     char name[128];
@@ -127,15 +129,15 @@ void process_msgs ()
     while(1) {
         int p = 0;      //to operate tokens of string
         
-        if (mq_receive (qdes_server, temp, MSG_BUFFER_SIZE, NULL) == -1) {
+        if (mq_receive (qdes_server, in_buffer, MSG_BUFFER_SIZE, NULL) == -1) {
             perror ("Server: mq_receive");
             exit (1);
         }
-        printf ("[MSG]: %s\n", temp);
+        sprintf(temp, "[MSG]: %s\n", in_buffer);
+        print_auto_row (chat_window, temp);
         //if receives service message
-        if (!strncmp ("/cmd", temp, 4)) {
-            // printf("Get cmd msg!\n");
-            token = strtok (temp, " ");
+        if (!strncmp ("/cmd", in_buffer, 4)) {
+            token = strtok (in_buffer, " ");
             //split cmd and args
             while (token != NULL) {
                 switch (p) {
@@ -147,12 +149,12 @@ void process_msgs ()
                 p++;
             }
             p = 0;
-            // printf("cmd = %s\n", cmd);
-            // printf("arg = %s\n", arg);
+
             //----ADD user----
             if (perm_to_join == 1 && !strcmp ("add_user", cmd)) {
                 strcpy(clients_info[n_of_client], arg);
-                printf("User %s has joined the chat!\n", clients_info[n_of_client]);
+                sprintf(temp, "User %s has joined the chat!\n", clients_info[n_of_client]);
+                print_auto_row(chat_window, temp);
                 // get clients descriptor
                 if ((qdes_client[n_of_client] = mq_open (clients_info[n_of_client], O_WRONLY)) == -1) {
                     perror ("Server: Not able to open client queue");
@@ -161,6 +163,7 @@ void process_msgs ()
                 n_of_client++;
                 //---refresh list of clients in clients---
                 refresh_clients();
+                printClients();
             }
             //----if clients buffer is full - send cmd to close new user
             else if (perm_to_join == 0 && !strcmp ("add_user", cmd)) {
@@ -180,14 +183,17 @@ void process_msgs ()
                 // if this user exists in list
                 if ((idx = del_el_double_ar(clients_info, arg, n_of_client)) >= 0) {
                     del_el_mqd_t(qdes_client, idx, n_of_client);
-                    printf("User %s has left the chat!\n", arg);
+                    sprintf(temp, "User %s has left the chat!\n", arg);
+                    print_auto_row(chat_window, temp);
                     n_of_client --;
                     refresh_clients();
+                    printClients();
                 }
             }
             //----check number of clients----
             if (n_of_client >= MAX_CLIENTS) {
-                printf("Number of clients >= %i. New user can't join\n", MAX_CLIENTS);
+                sprintf(temp, "Number of clients >= %i. New user can't join\n", MAX_CLIENTS);
+                print_auto_row(chat_window, temp);
                 perm_to_join = 0;
             } else perm_to_join = 1;  
         } else {                            //if regular message
@@ -202,16 +208,15 @@ void process_msgs ()
                 p++;
             }
             p = 0;
-            // printf("name = %s\n", name);
-            // printf("msg = %s\n", msg);
+
             //----make out message----
             char temp1[strlen(msg)];
             strcpy (temp1, msg);
             sprintf(out_buffer, "%s: %s", name, temp1);
-            // printf("Message: %s\n", out_buffer);
+
             //-----Send to all users-----
             send_to_all(out_buffer);
-            //memset (temp, 0, strlen (temp));
+
         }
     }       
 }
@@ -221,19 +226,32 @@ void close_myself()
         perror ("Server: mq_close");
         exit (1);
     }
-    printf ("Client: Queue is closed\n");
+    print_auto_row(chat_window, "Server: Queue is closed");
 
     if (mq_unlink (SERVER_QUEUE_NAME) == -1) {
         perror ("Server: mq_unlink");
         exit (1);
     }
-    printf ("Server: Queue is removed\n");
+    print_auto_row(chat_window, "Server: Queue is removed");
+    windows_del();
 }
 void SignalHandler(int sig)
 {
     //tell clients to close
     send_to_all("/cmd close");
     close_myself();
-    printf("Server is closed\n");
+    exit(0);
+    // printf("Server is closed\n");
     signal(sig, SIG_DFL);    //call default function
+}
+void printClients()
+{
+    wclear(clients_window);
+    box(clients_window, '|', '-');
+    wmove(clients_window, 1, 1);
+
+    for (int i = 0; i < n_of_client; i++) {
+        print(clients_window, clients_info[i], i);
+    }
+    wrefresh(clients_window);
 }

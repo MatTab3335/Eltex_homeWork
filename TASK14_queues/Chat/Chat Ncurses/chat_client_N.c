@@ -11,13 +11,15 @@
 #include <fcntl.h>
 #include <mqueue.h>
 
+#include "windows.h"
+
 
 #define SERVER_QUEUE_NAME   "/server_chat"
 #define QUEUE_PERMISSIONS 0660
 #define MAX_MESSAGES 10
 #define MAX_MSG_SIZE 256
 #define MSG_BUFFER_SIZE MAX_MSG_SIZE + 10
-#define MAX_CLIENTS 2
+#define MAX_CLIENTS 3
 
 int del_el_double_ar (char array[][MSG_BUFFER_SIZE], char *element, int size);
 void del_el_mqd_t (int *array, int idx, int size);
@@ -26,6 +28,7 @@ void *get_msg(void *args);
 void empty_stdin(void);
 void close_myself(void);
 void SignalHandler(int signal);
+void printClients();
 
 //Template for regular msgs: "clients_queue_name*message"
 /*Template for service msgs:   
@@ -49,10 +52,10 @@ int main (int argc, char **argv)
     struct mq_attr attr;
     pthread_t thr_send, thr_get;
     int *ret_val;
+
+    windows_init();
     //----register signals----
-    signal(SIGABRT, SignalHandler);
     signal(SIGINT, SignalHandler);
-    signal(SIGTERM, SignalHandler);
 
     attr.mq_flags = 0;
     attr.mq_maxmsg = MAX_MESSAGES;
@@ -61,7 +64,6 @@ int main (int argc, char **argv)
 
     // create the client queue for receiving messages from server
     sprintf (my_queue_name, "/name-%d", getpid ());
-    printf("My name is: %s\n", my_queue_name);
     // create first cmd message to add myself to chat
     sprintf (add_cmd, "/cmd add_user %s", my_queue_name);
     // create cmd message to del myself from chat
@@ -97,6 +99,7 @@ void *get_msg(void *args)
     char name[128];
     char cmd[128];
     char arg[128];
+    char temp[MSG_BUFFER_SIZE];
     int p = 0;
 
     while (perm_flag) {
@@ -106,7 +109,7 @@ void *get_msg(void *args)
             exit (1);
         }
         // display msg received from server
-         printf ("[MSG] %s\n", in_buffer);
+        print_auto_row (chat_window, in_buffer);
         //----If received msg = refresh clients
         if (!strncmp(in_buffer, "/cmd refresh_clients", 20)) {
             while (1) {                     //get n_of_ckients and array of clients
@@ -123,10 +126,12 @@ void *get_msg(void *args)
             }
             p = 0;
             //---print current users---
-            printf ("Now in chat %i users:\n", n_of_clients);
+            sprintf(temp, "Now in chat %i users:\n", n_of_clients);
+            print_auto_row (chat_window, temp);
+            printClients();
+
             for (int i = 0; i < n_of_clients; i++)
-                printf ("%s, ", clients_info[i]);
-            printf("\n");
+                print_auto_row (chat_window, clients_info[i]);
         }
         // if server tell me close - close  
         else if (!strncmp(in_buffer, "/cmd close", 10)) 
@@ -138,9 +143,12 @@ void *send_msg(void *args)
     char temp_buf [MSG_BUFFER_SIZE];
     int del = 0;        //flag to delete user
 
-    printf ("Enter a message: ");
-
-    while (fgets(temp_buf, MSG_BUFFER_SIZE, stdin)) {
+    while(1) {
+        wgetstr(msg_window, temp_buf);
+        wclear(msg_window);
+        box(msg_window, '|', '-');
+        wmove(msg_window, 1, 1);
+        wrefresh(msg_window);
 
         char temp[strlen(temp_buf)];
         strcpy(temp, temp_buf);
@@ -162,8 +170,7 @@ void *send_msg(void *args)
             break;
         }   
             
-        //printf ("Enter a message: ");
-        //empty_stdin();
+        
     }
 }
 int del_el_double_ar (char array[][MSG_BUFFER_SIZE], char *element, int size)
@@ -204,13 +211,14 @@ void close_myself()
         perror ("Client: mq_close");
         exit (1);
     }
-    printf ("Client: Queue is closed\n");
+    print_auto_row (chat_window, "Client: Queue is closed");
 
     if (mq_unlink (my_queue_name) == -1) {
         perror ("Client: mq_unlink");
         exit (1);
     }
-    printf ("Client: Queue is removed\n");
+    print_auto_row (chat_window, "Client: Queue is removed");
+    windows_del();
 }
 void SignalHandler(int sig)
 {
@@ -218,7 +226,17 @@ void SignalHandler(int sig)
     if (mq_send (qdes_server, del_cmd, strlen (del_cmd) + 1, 0) == -1)
             perror ("Client: Not able to send message to server");
     close_myself();
-    printf("Client is closed\n");
-    exit(1);
-    //signal(sig, SIG_DFL);    //call default function
+    exit(0);
+    signal(sig, SIG_DFL);    //call default function
+}
+void printClients()
+{
+    wclear(clients_window);
+    box(clients_window, '|', '-');
+    wmove(clients_window, 1, 1);
+
+    for (int i = 0; i < n_of_clients; i++) {
+        print(clients_window, clients_info[i], i);
+    }
+    wrefresh(clients_window);
 }
