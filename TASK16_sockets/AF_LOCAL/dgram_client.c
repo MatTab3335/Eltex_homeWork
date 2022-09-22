@@ -7,7 +7,8 @@
 #include <string.h>
 #include <unistd.h>
 
-#define MY_SOCK_PATH "/tmp/my_socket_server"
+#define SERVER_SOCK_PATH "/tmp/my_socket_server"
+#define MY_SOCK_PATH "/tmp/my_socket_client"
 #define LISTEN_BACKLOG 5
 
 #define handle_error(msg) \
@@ -17,6 +18,8 @@ int main(int argc, char *argv[])
 {
     int fd;
     struct sockaddr_un server_addr;
+	struct sockaddr_un my_addr;
+
     int server_addr_size = 0;
     char in_buf[256] = {};
 
@@ -25,10 +28,20 @@ int main(int argc, char *argv[])
         handle_error("socket");
 
     memset(&server_addr, 0, sizeof(struct sockaddr_un));
+	memset(&my_addr, 0, sizeof(struct sockaddr_un));
                         /* Clear structure */
-    server_addr.sun_family = AF_UNIX;
-    strncpy(server_addr.sun_path, MY_SOCK_PATH,
+	my_addr.sun_family = AF_UNIX;
+    strncpy(my_addr.sun_path, MY_SOCK_PATH,
             sizeof(server_addr.sun_path) - 1);
+    server_addr.sun_family = AF_UNIX;
+    strncpy(server_addr.sun_path, SERVER_SOCK_PATH,
+            sizeof(server_addr.sun_path) - 1);
+	
+	if (bind(fd, (struct sockaddr *) &my_addr,
+			sizeof(struct sockaddr_un)) == -1)
+		handle_error("bind");
+
+	//printf("bind\n");
 
     server_addr_size = sizeof(server_addr);
 
@@ -40,4 +53,7 @@ int main(int argc, char *argv[])
 
     printf("[MSG]: %s\n", in_buf);
 
+	unlink(MY_SOCK_PATH);
+    
 }
+
