@@ -31,8 +31,10 @@ int main(int argc, char *argv[])
     connect(fd, (struct sockaddr *) &server_addr, sizeof(struct sockaddr_un));
 
     send(fd, "hi", 2, 0);
-    recv(fd, in_buf, sizeof(in_buf), 0);
-    printf("[MSG]: %s\n", in_buf);
+    while (1) {
+        recv(fd, in_buf, sizeof(in_buf), 0);
+        printf("[MSG]: %s\n", in_buf);
+    }
 
     /* Code to deal with incoming connection(s)... */
 

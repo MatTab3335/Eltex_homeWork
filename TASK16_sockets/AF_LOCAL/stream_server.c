@@ -48,10 +48,11 @@ int main(int argc, char *argv[])
         handle_error("accept");
     printf("new client\n");
     /* Code to deal with incoming connection(s)... */
-
-    recv(cfd, in_buf, sizeof(in_buf), 0);
-    printf("[MSG]: %s\n", in_buf);
-    send(cfd, in_buf, sizeof(in_buf), 0);
+    while (1) {
+        recv(cfd, in_buf, sizeof(in_buf), 0);
+        printf("[MSG]: %s\n", in_buf);
+        send(cfd, in_buf, sizeof(in_buf), 0);
+    }
 
     unlink(MY_SOCK_PATH);
     /* When no longer required, the socket pathname, MY_SOCK_PATH
