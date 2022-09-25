@@ -27,6 +27,7 @@ int main(int argc, char *argv[])
 
     // register signals Ctrl+c
     signal(SIGINT, SignalHandler);
+    signal(SIGPIPE, SIG_IGN);
 
     // sprintf(sock_path, "%s%i", MY_SOCK_PATH, getpid());
     // printf("%s\n", sock_path);
@@ -47,7 +48,7 @@ int main(int argc, char *argv[])
     if (recv(fd, in_buf, sizeof(in_buf), MSG_WAITALL) == -1)
     	handle_error("recv error");
     printf("Client %i: %s\n", fd, in_buf);
-
+    usleep(500000);
     close(fd);
 
     fd = socket(AF_UNIX, SOCK_STREAM, 0);
@@ -66,10 +67,10 @@ int main(int argc, char *argv[])
     if (connect(fd, (struct sockaddr *) &server_addr, sizeof(struct sockaddr_un)))
     	handle_error("connect error");
 
-    if (send(fd, "Hi", sizeof("Hi"), 0) == -1)
+    if (send(fd, "Hi", sizeof("Hi"), MSG_NOSIGNAL) == -1)
     	handle_error("send error"); 
     while (1) {
-	    if (recv(fd, in_buf, sizeof(in_buf), 0) == -1)
+	    if (recv(fd, in_buf, sizeof(in_buf), MSG_NOSIGNAL) == -1)
 	    	handle_error("recv error"); 
 	    printf("[MSG]: %s\n", in_buf);
     }
@@ -80,6 +81,7 @@ int main(int argc, char *argv[])
 void SignalHandler(int signal)
 {	
 	close(fd);
+
 	printf("Finish client\n");
 	exit(0);
 }

@@ -68,10 +68,10 @@ void *get_msg(void *input)
                      &client_addr_size);
 
 	while(1) {
-		if (recv(fd, in_buf, sizeof(in_buf), 0) == -1)
+		if (recv(fd, in_buf, sizeof(in_buf), MSG_NOSIGNAL) == -1)
 			handle_error("recv error");
 		printf("[MSG]: %s\n", in_buf);
-        if (send(fd, in_buf, sizeof(in_buf), 0) == -1)
+        if (send(fd, in_buf, sizeof(in_buf), MSG_NOSIGNAL) == -1)
         	handle_error("send error");
 	}
 }

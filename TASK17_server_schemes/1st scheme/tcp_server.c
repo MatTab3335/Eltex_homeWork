@@ -3,7 +3,7 @@
 
 /* service msg format: "<srvc>message" */
 
-
+void sigpipe_handler(int unused) {}
 
 int main(int argc, char *argv[])
 {
@@ -15,6 +15,8 @@ int main(int argc, char *argv[])
     
     // register signals Ctrl+c
     signal(SIGINT, SignalHandler);
+    //ignore SIGPIPE
+    signal(SIGPIPE, SIG_IGN); 
 
     thread_list = allocate(thread_list, INIT_THR_NUM);
 
@@ -73,8 +75,10 @@ int main(int argc, char *argv[])
         if (send(cfd, out_buf, sizeof(out_buf), 0) == -1)
             handle_error("main send error");
 
-        shutdown(cfd, SHUT_RDWR);
+        //shutdown(cfd, SHUT_RDWR);
         close(cfd);
+
+        cfd = 0;
     }
 
     exit(0);
