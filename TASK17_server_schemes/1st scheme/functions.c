@@ -68,10 +68,13 @@ void *get_msg(void *input)
                      &client_addr_size);
 
 	while(1) {
-		if (recv(fd, in_buf, sizeof(in_buf), MSG_NOSIGNAL) == -1)
-			handle_error("recv error");
+		int recv_bytes = recv(fd, in_buf, sizeof(in_buf), 0);
+		if (recv_bytes == -1 || recv_bytes == 0) {
+			printf("Thread %i is closed\n", id);
+			break;
+		}
 		printf("[MSG]: %s\n", in_buf);
-        if (send(fd, in_buf, sizeof(in_buf), MSG_NOSIGNAL) == -1)
-        	handle_error("send error");
+        // if (send(fd, in_buf, sizeof(in_buf), MSG_NOSIGNAL) == -1)
+        // 	handle_error("send error");
 	}
 }
