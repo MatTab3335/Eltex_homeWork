@@ -10,6 +10,7 @@
 #include <pthread.h>
 #include <malloc.h>
 #include <signal.h>
+#include <semaphore.h>
 
 #define MY_SOCK_PATH "/tmp/tcp_server"
 #define LISTEN_BACKLOG 5
@@ -23,6 +24,8 @@
 extern int n_of_clients;
 //thread variablses
 extern pthread_t *thread_list;
+//variable to permit sending info msg to client
+extern int perm_send;
 
 struct args {
     int cfd;

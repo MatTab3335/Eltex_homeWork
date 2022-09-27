@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
         thread_id = n_of_clients;
         arg->cfd = cfd;
         arg->id = thread_id;
-        printf("cfd = %i, id = %i\n", arg->cfd, arg->id);
+        // printf("cfd = %i, id = %i\n", arg->cfd, arg->id);
 
         pthread_create(&thread_list[thread_id], NULL, get_msg, (void *) arg);
 
@@ -72,13 +72,17 @@ int main(int argc, char *argv[])
         n_of_clients++;
 
         sprintf(out_buf, "%i", thread_id);
+        
+        //wait while thread bind
+        while(!perm_send)
+            usleep(1000);
         if (send(cfd, out_buf, sizeof(out_buf), 0) == -1)
             handle_error("main send error");
+        perm_send = 0;
+        
 
         //shutdown(cfd, SHUT_RDWR);
         close(cfd);
-
-        cfd = 0;
     }
 
     exit(0);
