@@ -11,55 +11,66 @@ int main(int argc, char *argv[])
     int cfd, sfd;
     struct sockaddr_un client_addr;
     socklen_t client_addr_size;
+    //
+    int n_of_clients = 0;
+    int n_of_threads = INIT_THR_NUM;
+    int *serv_idx;
+    char out_buf[256] = {};
+    struct args *arg = (struct args*)malloc(sizeof(struct args));
     
     char in_buf[256];
     // register signals Ctrl+c
     signal(SIGINT, SignalHandler);
-	//allocate pull
-    thread_list = allocate(thread_list, INIT_THR_NUM);
-    //create main server
+    // allocate servers status array
+    serv_stat = (char *)malloc(INIT_THR_NUM * sizeof(char));
+    // allocate servers index array
+    serv_idx = (int *)malloc(INIT_THR_NUM * sizeof(int));
+	// allocate pull
+    thread_list = allocate(thread_list, n_of_threads);
+    // create main server
     sfd = create_server(AF_UNIX, SOCK_STREAM, MY_SOCK_PATH);
 	
 	memset(&client_addr, 0, sizeof(struct sockaddr_un)); //clear
     client_addr_size = sizeof(struct sockaddr_un);
 
-    while (1) {
-        int thread_id = 0;
-        char out_buf[256] = {};
-        struct args *arg = (struct args*)malloc(sizeof(struct args));
+    //create pull of server/threads
+    for (int i = 0; i < INIT_THR_NUM; i++) {
+        serv_idx[i] = i;
+        pthread_create(&thread_list[i], NULL, thr_func, (void *) &serv_idx[i]);
+        usleep(1000);
+    }
+    printf("Pull is ready\n");
+
+    while (1) {        
 
         cfd = accept(sfd, (struct sockaddr *) &client_addr,
                      &client_addr_size);
-        if (cfd == -1) handle_error("accept");
-
-        printf("Client № %i \n", thread_id));
-        
-        // increase number of servers
-        if (thread_id >= INIT_THR_NUM)
-            thread_list = reallocate(thread_list, n_of_clients + 10);
-		// fill args to pass to server
-        arg->cfd = cfd;
-        arg->id = thread_id;
-        // printf("cfd = %i, id = %i\n", arg->cfd, arg->id);
-
-        pthread_create(&thread_list[thread_id], NULL, get_msg, (void *) arg);
-
+        if (cfd == -1) 
+            handle_error("accept");
 
         n_of_clients++;
-
-        sprintf(out_buf, "%i", thread_id);
+        printf("Client № %i \n", n_of_clients);
         
-        //wait while thread bind
-        while(!perm_send)
-            usleep(1000);
-        if (send(cfd, out_buf, sizeof(out_buf), 0) == -1)
-            handle_error("main send error");
-        perm_send = 0;
-        
+        // increase number of servers
+        if (n_of_clients >= n_of_threads) {
+            n_of_threads += 10;
+            thread_list = reallocate(thread_list, n_of_threads);
+            serv_stat = realloc(serv_stat, n_of_threads * sizeof(int));
+            serv_idx = realloc(serv_idx, n_of_threads * sizeof(char));
+        }
 
-        //shutdown(cfd, SHUT_RDWR);
+        // check what server is not busy, then send to new client id of this server
+        for (int i = 0; i < n_of_threads; i++) {
+            if (serv_stat[i] == 0) {
+                sprintf(out_buf, "%i", i);
+                if (send(cfd, out_buf, sizeof(out_buf), 0) == -1)
+                    handle_error("main send id error");
+                break;
+            }
+        }    
         close(cfd);
     }
 
+    unlink(MY_SOCK_PATH);
     exit(0);
 }

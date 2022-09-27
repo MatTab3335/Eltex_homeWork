@@ -26,16 +26,21 @@ extern int n_of_clients;
 extern pthread_t *thread_list;
 //variable to permit sending info msg to client
 extern int perm_send;
+//global array to mark what thread/server is free (1 - busy, 0 - free)
+extern char *serv_stat;
+
 
 struct args {
     int cfd;
     int id;
 };
 
+
 pthread_t *allocate(pthread_t *list, int init_value);        //alloc list of threads
 pthread_t *reallocate(pthread_t *list, int size);      //change size
 void SignalHandler(int signal);
 void *thr_func(void *input);
-int create_socket(int domain, int type, char *path);
+int create_server(int domain, int type, char *path);
+void handle_error_info(char *msg, char *info);
 
 #endif
