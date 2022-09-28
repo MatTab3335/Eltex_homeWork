@@ -1,6 +1,7 @@
 #include "server_functions.h"
 
 int n_of_clients = 0;
+int n_of_threads = 0;
 //thread variablses
 pthread_t *thread_list = NULL;
 int perm_send = 0;
@@ -26,7 +27,8 @@ pthread_t *reallocate(pthread_t *list, int size){      //change size
 void SignalHandler(int signal)
 {
         printf("Finish server\n");
-        for (int i = 0; i < n_of_clients; i++) {
+        unlink_servers();
+        for (int i = 0; i < n_of_threads; i++) {
                 pthread_cancel(thread_list[i]);
         }
         unlink(MY_SOCK_PATH);
@@ -85,19 +87,33 @@ void *thr_func(void *input)      //function for message processing thread
     printf("Server #%i is ready\n", id);
     // grant permission to send client info about me
     perm_send = 1;
-            
-    cfd = accept(my_fd, (struct sockaddr *) &client_addr,
-                     &client_addr_size);
+    
+    while(1) {        
+		cfd = accept(my_fd, (struct sockaddr *) &client_addr,
+						 &client_addr_size);
+		if (cfd == -1) 
+			handle_error("accept");
 
-    while(1) {
-        int recv_bytes = recv(cfd, in_buf, sizeof(in_buf), 0);
-        if (recv_bytes == -1 || recv_bytes == 0) {
-                printf("Thread %i is closed\n", id);
-                break;
-        }
-        printf("[MSG]: %s\n", in_buf);
-        if (send(cfd, in_buf, sizeof(in_buf), MSG_NOSIGNAL) == -1)
-            handle_error("send error");
-    }
+		while(1) {
+			int recv_bytes = recv(cfd, in_buf, sizeof(in_buf), 0);
+			if (recv_bytes == -1 || recv_bytes == 0) {
+					printf("Thread %i is free\n", id);
+					serv_stat[id] = 0;
+					break;
+			}
+			printf("[MSG%i]: %s\n", id, in_buf);
+			if (send(cfd, in_buf, sizeof(in_buf), MSG_NOSIGNAL) == -1)
+				handle_error("send error");
+		}
+	}
     unlink(my_path);
+}
+void unlink_servers()
+{
+	char path[256] = {};
+	for (int i = 0; i < n_of_threads; i++) {
+		sprintf(path, "/tmp/tcp_server_%i", i);
+		unlink(path);
+	}
+	printf("All servers are closed\n");
 }

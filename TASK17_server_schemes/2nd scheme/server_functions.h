@@ -1,5 +1,5 @@
-#ifndef _FUNCTIONS_H_
-#define _FUNCTIONS_H_
+#ifndef _SERVER_FUNCTIONS_H_
+#define _SERVER_FUNCTIONS_H_
 
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -10,18 +10,18 @@
 #include <pthread.h>
 #include <malloc.h>
 #include <signal.h>
-#include <semaphore.h>
 
 #define MY_SOCK_PATH "/tmp/tcp_server"
 #define LISTEN_BACKLOG 5
 
-#define INIT_THR_NUM 100        //inittial size of thread list
+#define INIT_THR_NUM 3        //inittial size of thread list
 
 
 #define handle_error(msg) \
     do { perror(msg); exit(EXIT_FAILURE); } while (0)
 
 extern int n_of_clients;
+extern int n_of_threads;
 //thread variablses
 extern pthread_t *thread_list;
 //variable to permit sending info msg to client
@@ -42,5 +42,6 @@ void SignalHandler(int signal);
 void *thr_func(void *input);
 int create_server(int domain, int type, char *path);
 void handle_error_info(char *msg, char *info);
+void unlink_servers();
 
 #endif
