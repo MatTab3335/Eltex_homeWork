@@ -1,5 +1,5 @@
 //udp clients - scheme #1
-#include "server_functions.h"
+#include "functions.h"
 
 
 
@@ -11,11 +11,12 @@ int main(int argc, char *argv[])
     int thr_idx[THR_N];
     
     // register signals Ctrl+c
-    signal(SIGINT, SignalHandler);
+    signal(SIGINT, SignalHandlerClient);
 
     for (int i = 0; i < THR_N; i++) {
         thr_idx[i] = i;
         pthread_create(&thr_list[i], NULL, thr_func_client, (void *) &thr_idx[i]);
+        // getchar();
         usleep(70000);
     }
 }

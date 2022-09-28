@@ -1,7 +1,7 @@
 //functions for 1st scheme tcp
 
-#ifndef _SERVER_FUNCTIONS_H_
-#define _SERVER_FUNCTIONS_H_
+#ifndef _FUNCTIONS_H_
+#define _FUNCTIONS_H_
 
 #include <sys/socket.h>
 #include <sys/un.h>
