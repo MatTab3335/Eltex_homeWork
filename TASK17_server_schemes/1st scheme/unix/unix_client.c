@@ -1,4 +1,4 @@
-//tcp clients - scheme #1
+//unix clients - scheme #1
 #include "server_functions.h"
 
 

@@ -1,4 +1,5 @@
-//functions for 2nd scheme
+//functions for 1st scheme unix
+
 #ifndef _SERVER_FUNCTIONS_H_
 #define _SERVER_FUNCTIONS_H_
 

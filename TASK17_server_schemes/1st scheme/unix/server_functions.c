@@ -1,4 +1,4 @@
-//functions for 2nd scheme
+//functions for 1st scheme unix
 #include "server_functions.h"
 
 int n_of_clients = 0;

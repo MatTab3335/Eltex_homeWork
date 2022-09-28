@@ -1,4 +1,4 @@
-/* tcp server - scheme #1
+/* unix server - scheme #1
  * For each client main server vreats thread = server to 
  * communicate with client
 */ 

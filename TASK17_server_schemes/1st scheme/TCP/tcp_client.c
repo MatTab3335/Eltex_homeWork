@@ -1,9 +1,6 @@
 //tcp clients - scheme #1
-#include "server_functions.h"
+#include "functions.h"
 
-
-
-int fd;
 
 int main(int argc, char *argv[])
 {
