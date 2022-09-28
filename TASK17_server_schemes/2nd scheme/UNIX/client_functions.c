@@ -1,3 +1,5 @@
+// functions for 2nd scheme unix
+
 #include "client_functions.h"
 
 static pthread_mutex_t m1 = PTHREAD_MUTEX_INITIALIZER;

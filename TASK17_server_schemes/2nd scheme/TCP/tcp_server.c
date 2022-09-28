@@ -3,22 +3,22 @@
  * create new servers and delete them if its not used. When thread is free
  * it tells main server about that and next client will use thi thread
 */
-#include "server_functions.h"
+#include "functions.h"
 
 
 int main(int argc, char *argv[])
 {
     // sockets variables
-    int cfd, sfd;
-    struct sockaddr_un client_addr;
+    int tcp_s_s, tcp_s_c;
+    struct sockaddr_in client_addr;
     socklen_t client_addr_size;
+    char in_buf[256] = {};
+    char out_buf[256] = {};
     //
     n_of_clients = 0;
     n_of_threads = INIT_THR_NUM;
     int *serv_idx;
-    char out_buf[256] = {};
-    
-    char in_buf[256];
+ 
     // register signals Ctrl+c
     signal(SIGINT, SignalHandler);
     // allocate servers status array
@@ -30,10 +30,10 @@ int main(int argc, char *argv[])
 	// allocate pull
     thread_list = allocate(thread_list, n_of_threads);
     // create main server
-    sfd = create_server(AF_UNIX, SOCK_STREAM, MY_SOCK_PATH);
+    tcp_s_s = create_server(AF_INET, SOCK_STREAM, MAIN_SERVER_PORT);
 	
-	memset(&client_addr, 0, sizeof(struct sockaddr_un)); //clear
-    client_addr_size = sizeof(struct sockaddr_un);
+	memset(&client_addr, 0, sizeof(struct sockaddr_in)); //clear
+    client_addr_size = sizeof(struct sockaddr_in);
 
     //create pull of server/threads
     for (int i = 0; i < INIT_THR_NUM; i++) {
@@ -44,11 +44,11 @@ int main(int argc, char *argv[])
     printf("Pull is ready\n");
 
     while (1) {     
-		   
-		// nprintf("Waiting for accept\n");
-        cfd = accept(sfd, (struct sockaddr *) &client_addr,
+	
+		// printf("Waiting for accept\n");
+        tcp_s_c = accept(tcp_s_s, (struct sockaddr *) &client_addr,
                      &client_addr_size);
-        if (cfd == -1) 
+        if (tcp_s_c == -1) 
             handle_error("accept");
 
         n_of_clients++;
@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
             //increase pull of server/threads
 			for (int i = n_of_clients; i < n_of_threads; i++) {
 				serv_idx[i] = i;
-				printf("idx = %i\n", serv_idx[i]);
+				// printf("idx = %i\n", serv_idx[i]);
 				pthread_create(&thread_list[i], NULL, thr_func, (void *) &serv_idx[i]);
 				usleep(10000);
 			}
@@ -75,15 +75,13 @@ int main(int argc, char *argv[])
             if (serv_stat[i] == 0) {
 				serv_stat[i] = 1;
                 sprintf(out_buf, "%i", i);
-                if (send(cfd, out_buf, sizeof(out_buf), 0) == -1)
+                if (send(tcp_s_c, out_buf, sizeof(out_buf), 0) == -1)
                     handle_error("main send id error");
                 break;
             }
         }    
-        close(cfd);
+        close(tcp_s_c);
     }
     
-	unlink_servers();
-    unlink(MY_SOCK_PATH);
     exit(0);
 }

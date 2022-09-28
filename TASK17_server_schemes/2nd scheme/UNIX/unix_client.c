@@ -1,4 +1,4 @@
-//tcp clients - scheme #2
+//unix clients - scheme #2
 #include "client_functions.h"
 
 int main(int argc, char *argv[])

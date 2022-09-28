@@ -47,7 +47,6 @@ void handle_error_int(char *msg, int id);
 
 // for client
 void *thr_func_client(void *input);
-
 void SignalHandlerClient(int signal);
 
 #endif

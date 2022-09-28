@@ -1,3 +1,4 @@
+// functions for 2nd scheme unix
 #ifndef _CLIENT_FUNCTIONS_H_
 #define _CLIENT_FUNCTIONS_H_
 
