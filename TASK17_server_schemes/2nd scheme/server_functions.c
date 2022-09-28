@@ -1,3 +1,4 @@
+// functions for 1st scheme
 #include "server_functions.h"
 
 int n_of_clients = 0;

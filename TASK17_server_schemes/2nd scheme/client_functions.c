@@ -15,7 +15,7 @@ int connect_to_serv(int domain, int type, char *path)
     
     fd = socket(domain, type, 0);
     if (fd == -1)
-        handle_error_info("1st socket", path);
+        handle_error_info("socket", path);
 
     memset(&server_addr, 0, sizeof(struct sockaddr_un));
 
@@ -24,7 +24,7 @@ int connect_to_serv(int domain, int type, char *path)
             sizeof(server_addr.sun_path) - 1);
     
     if (connect(fd, (struct sockaddr *) &server_addr, sizeof(struct sockaddr_un)))
-    	handle_error_info("1st connect error", path);
+    	handle_error_info("connect error", path);
        
     return fd;
 }

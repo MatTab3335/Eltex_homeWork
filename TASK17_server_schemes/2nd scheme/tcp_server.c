@@ -17,7 +17,6 @@ int main(int argc, char *argv[])
     n_of_threads = INIT_THR_NUM;
     int *serv_idx;
     char out_buf[256] = {};
-    struct args *arg = (struct args*)malloc(sizeof(struct args));
     
     char in_buf[256];
     // register signals Ctrl+c
