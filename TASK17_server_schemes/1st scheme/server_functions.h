@@ -1,3 +1,4 @@
+//functions for 2nd scheme
 #ifndef _SERVER_FUNCTIONS_H_
 #define _SERVER_FUNCTIONS_H_
 
@@ -15,6 +16,10 @@
 #define LISTEN_BACKLOG 5
 
 #define INIT_THR_NUM 10        //inittial size of thread list
+
+// client defs
+#define MAIN_SERVER_PATH "/tmp/tcp_server"
+#define THR_N 10
 
 
 #define handle_error(msg) \
@@ -34,7 +39,6 @@ void *thr_func(void *input);
 int create_server(int domain, int type, char *path);
 int connect_server(int domain, int type, char *path);
 void handle_error_info(char *msg, char *info);
-void unlink_servers();
 
 // for client
 void *thr_func_client(void *input);

@@ -1,8 +1,7 @@
-//tcp clients - scheme #1
+//tcp clients - scheme #2
 #include "server_functions.h"
 
-#define MAIN_SERVER_PATH "/tmp/tcp_server"
-#define THR_N 1000
+
 
 int fd;
 
@@ -16,7 +15,7 @@ int main(int argc, char *argv[])
 
     for (int i = 0; i < THR_N; i++) {
         thr_idx[i] = i;
-        pthread_create(&thr_list[i], NULL, thread_func, (void *) &thr_idx[i]);
+        pthread_create(&thr_list[i], NULL, thr_func_client, (void *) &thr_idx[i]);
         usleep(70000);
     }
 }

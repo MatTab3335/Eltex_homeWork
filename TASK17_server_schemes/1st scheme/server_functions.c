@@ -1,4 +1,5 @@
-#include "functions.h"
+//functions for 2nd scheme
+#include "server_functions.h"
 
 int n_of_clients = 0;
 int n_of_threads = 0;
@@ -26,7 +27,10 @@ void SignalHandler(int signal)
 {
     printf("Finish server\n");
     for (int i = 0; i < n_of_clients; i++) {
-            pthread_cancel(thread_list[i]);
+        char temp[256] = {};
+        sprintf(temp, "/tmp/tcp_server_%i", i);
+        unlink(temp);
+        pthread_cancel(thread_list[i]);
     }
     unlink(MY_SOCK_PATH);
     free(thread_list);
@@ -34,7 +38,7 @@ void SignalHandler(int signal)
 }
 void SignalHandlerClient(int signal)
 {   
-    close(fd);
+    // close(fd);
     printf("Finish client\n");
     exit(0);
 }
@@ -85,8 +89,8 @@ int connect_server(int domain, int type, char *path)
 }
 void *thr_func(void *input)      //function for message processing thread
 {
-    int my_fd;
-    struct client_addr;
+    int my_fd, cfd;
+    struct sockaddr_un client_addr;
     socklen_t client_addr_size;
     char in_buf[256] = {};
     char my_path[256] = {};
@@ -98,27 +102,28 @@ void *thr_func(void *input)      //function for message processing thread
 
     sprintf(my_path, "/tmp/tcp_server_%i", id);
 
-    create_server(AF_UNIX, SOCK_STREAM, my_path);
+    my_fd = create_server(AF_UNIX, SOCK_STREAM, my_path);
         
     perm_send = 1;      //permit sent to client info about me
     
-    fd = accept(my_fd, (struct sockaddr *) &client_addr,
+    cfd = accept(my_fd, (struct sockaddr *) &client_addr,
                      &client_addr_size);
 
     while(1) {
-        int recv_bytes = recv(fd, in_buf, sizeof(in_buf), 0);
+        int recv_bytes = recv(cfd, in_buf, sizeof(in_buf), 0);
         if (recv_bytes == -1 || recv_bytes == 0) {
                 printf("Thread %i is closed\n", id);
                 break;
         }
         printf("[MSG]: %s\n", in_buf);
-        if (send(fd, in_buf, sizeof(in_buf), MSG_NOSIGNAL) == -1)
+        if (send(cfd, in_buf, sizeof(in_buf), MSG_NOSIGNAL) == -1)
             handle_error("send error");
     }
     unlink(my_path);
 }
 void *thr_func_client(void *input)
 {
+    int fd;
     char in_buf[256] = {};
     char server_path[256] = {};
 
@@ -129,12 +134,12 @@ void *thr_func_client(void *input)
     
     //ont thread per time to connect to main server        
     pthread_mutex_lock(&m1);
-    fd = connect_serv(AF_UNIX, SOCK_STREAM, MAIN_SERVER_PATH);
+    fd = connect_server(AF_UNIX, SOCK_STREAM, MAIN_SERVER_PATH);
     pthread_mutex_unlock(&m1);
     //get new server id
     int recv_bytes = recv(fd, in_buf, sizeof(in_buf), 0);
     if (recv_bytes == -1 || recv_bytes == 0)
-        handle_error("1st recv error", id);
+        handle_error_client("1st recv error", id);
         
     printf("Client %i: %s\n", id, in_buf);
     close(fd);  // close coonection to main server
@@ -142,10 +147,10 @@ void *thr_func_client(void *input)
     sprintf(server_path, "/tmp/tcp_server_%i", atoi(in_buf));
 
     // connect to new server
-    fd = connect_server(AF_UNIX, SOCK_STREAM, server_path)
+    fd = connect_server(AF_UNIX, SOCK_STREAM, server_path);
 
     if (send(fd, "Hi", sizeof("Hi"), MSG_NOSIGNAL) == -1)
-        handle_error("2nd send error", id); 
+        handle_error_client("2nd send error", id); 
     while (1) {
         int recv_bytes = recv(fd, in_buf, sizeof(in_buf), 0);
         if (recv_bytes == -1 || recv_bytes == 0) {
@@ -156,9 +161,16 @@ void *thr_func_client(void *input)
     }
     exit(0);
 }
-void handle_error(char *msg, int id)
+void handle_error_client(char *msg, int id)
 {
     char temp[256] = {};
     sprintf(temp, "id[%i]: %s", id, msg);
     perror(temp); exit(EXIT_FAILURE);
+}
+void handle_error_info(char *msg, char *info)
+{
+    char temp[256] = {};
+    sprintf(temp, "<%s> : %s", info, msg);
+    perror(temp); 
+    exit(EXIT_FAILURE);
 }

@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
             thread_list = reallocate(thread_list, n_of_clients + 10);
 
         thread_id = n_of_clients;
-        pthread_create(&thread_list[thread_id], NULL, get_msg, (void *) thread_id);
+        pthread_create(&thread_list[thread_id], NULL, thr_func, (void *) &thread_id);
         n_of_clients++;
 
         sprintf(out_buf, "%i", thread_id);      
