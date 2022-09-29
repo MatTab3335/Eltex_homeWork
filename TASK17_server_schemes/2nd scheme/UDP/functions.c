@@ -119,6 +119,7 @@ void *thr_func(void *input)      //function for message processing thread
         if (!strcmp("exit\n", in_buf)) {
                 printf("Thread %i is free\n", id);
                 serv_stat[id] = 0;
+                n_of_clients--;
                 continue;
         }
         
