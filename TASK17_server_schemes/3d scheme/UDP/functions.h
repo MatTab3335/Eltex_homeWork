@@ -1,11 +1,15 @@
-// functions for 2nd scheme tcp
+// functions for 3d scheme udp
 #ifndef _FUNCTIONS_H_
 #define _FUNCTIONS_H_
 
 #include <sys/socket.h>
+#include <sys/types.h>
 #include <sys/un.h>
+#include <sys/stat.h>
+
 #include <stdlib.h>
 #include <stdio.h>
+
 #include <string.h>
 #include <unistd.h>
 #include <pthread.h>
@@ -14,11 +18,20 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
+#include <fcntl.h>
+#include <mqueue.h>
 
 // server defs
 #define MAIN_SERVER_PORT 3000
 #define LISTEN_BACKLOG 5
 #define INIT_THR_NUM 10        //inittial size of thread list
+
+#define SERVER_QUEUE_NAME   "/3d_scheme_queue"
+#define THREADS_QUEUE_NAME   "/3d_scheme_queue_thr"
+#define QUEUE_PERMISSIONS 0660      //-rw
+#define MAX_MESSAGES 10
+#define MAX_MSG_SIZE 256
+#define MSG_BUFFER_SIZE MAX_MSG_SIZE + 10
 
 // client defs
 #define THR_N 100

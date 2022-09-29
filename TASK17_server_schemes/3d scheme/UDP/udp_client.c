@@ -1,4 +1,4 @@
-//tcp clients - scheme #2
+//udp clients - scheme #3
 #include "functions.h"
 
 int main(int argc, char *argv[])
@@ -9,7 +9,7 @@ int main(int argc, char *argv[])
     // register signals Ctrl+c
     signal(SIGINT, SignalHandler);
 
-    for (int i = 1; i <= THR_N; i++) {
+    for (int i = 0; i <= THR_N; i++) {
 		serv_idx[i] = i;
         pthread_create(&thr_list[i], NULL, thr_func_client, (void *) &serv_idx[i]);
         getchar();

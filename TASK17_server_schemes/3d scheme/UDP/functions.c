@@ -1,4 +1,4 @@
-// functions for 2nd scheme tcp
+// functions for 3d scheme udp
 #include "functions.h"
 
 int n_of_clients = 0;
@@ -7,7 +7,7 @@ int n_of_threads = 0;
 pthread_t *thread_list = NULL;
 int perm_send = 0;
 char *serv_stat;
-static pthread_mutex_t m1 = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t m1 = PTHREAD_MUTEX_INITIALIZER;
 
 
 pthread_t *allocate(pthread_t *list, int init_value)    //alloc list of threads
@@ -28,6 +28,7 @@ pthread_t *reallocate(pthread_t *list, int size){      //change size
 void SignalHandler(int signal)
 {
     printf("Finish server\n");
+    
     for (int i = 0; i < n_of_threads; i++) {
         pthread_cancel(thread_list[i]);
     }
@@ -58,7 +59,7 @@ int create_server(int domain, int type, int server_port)
 
     if (bind(udp_s, (struct sockaddr *) &my_addr, sizeof(struct sockaddr_in)) == -1)
         handle_error_int("bind", server_port);
-
+        
     printf("Server is ready on port %i\n", server_port);
     
     return udp_s;
@@ -79,14 +80,15 @@ int connect_server(int domain, int type, int server_port)
     server_addr.sin_port = htons(server_port);
     if (inet_pton(domain, "127.0.0.1", &server_addr.sin_addr) == -1)
         handle_error("inet_pton");
-    // send message to let server know who am I
+    // send message to let server know who am I    
     sendto(udp_s, "connect", sizeof("connect"), 0,
                 (struct sockaddr *) &server_addr, server_addr_size);
-    // connect
-    if (connect(udp_s, (struct sockaddr *) &server_addr, sizeof(struct sockaddr_in)))
+                
+    if (connect(udp_s, (struct sockaddr *) &server_addr, 
+            sizeof(struct sockaddr_in)))
         handle_error_int("connect error", server_port);
-    printf("Connected to server on port %i\n", server_port);
-       
+        
+    printf("Connected to server on port %i\n", server_port);   
     return udp_s;
 }
 void *thr_func(void *input)      //function for message processing thread
@@ -95,7 +97,10 @@ void *thr_func(void *input)      //function for message processing thread
     struct sockaddr_in client_addr;
     socklen_t client_addr_size;
     char in_buf[256] = {};
+    char out_buf[256] = {};
     char my_path[256] = {};
+    mqd_t qdes_server, qdes_threads;
+    char flag_free = 0;         // 0 - I'm free, 1 - busy with client
 
     int id = *((int *)input);
     int server_port = id + 1 + MAIN_SERVER_PORT;
@@ -104,31 +109,45 @@ void *thr_func(void *input)      //function for message processing thread
     memset(&client_addr, 0, sizeof(struct sockaddr_in));
 
     my_udp_s = create_server(AF_INET, SOCK_DGRAM, server_port);
-        
-    perm_send = 1;      //permit sent to client info about me
-
-    while (1) {
-        int recv_bytes = recvfrom(my_udp_s, in_buf, sizeof(in_buf), 0, 
-                (struct sockaddr *) &client_addr, &client_addr_size);
-        // printf("Received bytes %i", recv_bytes);
-        if (recv_bytes == -1 || recv_bytes == 0) {
+    
+    if ((qdes_server = mq_open (SERVER_QUEUE_NAME, O_WRONLY)) == -1)
+        handle_error_int("Can't open server queue", id); 
+    if ((qdes_threads = mq_open (THREADS_QUEUE_NAME, O_RDONLY)) == -1)
+        handle_error_int("Can't open threads queue", id);
+         
+    while(1) {
+        // get client from queue
+        printf("[%i] is waiting for client\n", id);
+        if (mq_receive (qdes_threads, in_buf, MSG_BUFFER_SIZE, NULL) == -1)
+            handle_error_int("Can't receive msg from queue", id);
+        // printf("[%i]: Received msg from queue - %s\n", id, in_buf);
+        // tell main server I accept client
+        sprintf(out_buf, "%i", server_port);
+        if (mq_send (qdes_server, out_buf, strlen(out_buf) + 1, 0) == -1)
+            handle_error("Server: Not able to send message to main server queue");
+        while (1) {
+            // accept client
+            int recv_bytes = recvfrom(my_udp_s, in_buf, sizeof(in_buf), 0, 
+                    (struct sockaddr *) &client_addr, &client_addr_size);
+            if (recv_bytes == -1 || recv_bytes == 0) {
+                printf("Thread %i is free\n", id);
+                break;
+            }
+            if (!strcmp("exit\n", in_buf)) {
                 printf("Thread %i is free\n", id);
                 serv_stat[id] = 0;
-                continue;
+                n_of_clients--;
+                break;
+            }
+            printf("[MSG%i]: %s\n", id, in_buf);
+            if (sendto(my_udp_s, in_buf, sizeof(in_buf), 0,
+                    (struct sockaddr *) &client_addr, client_addr_size) == -1)
+                handle_error_int("send error", server_port);
         }
-        if (!strcmp("exit\n", in_buf)) {
-                printf("Thread %i is free\n", id);
-                serv_stat[id] = 0;
-                continue;
-        }
-        
-        printf("[MSG%i]: %s\n", id, in_buf);
-        if (sendto(my_udp_s, in_buf, sizeof(in_buf), 0,
-                (struct sockaddr *) &client_addr, client_addr_size) == -1)
-            handle_error_int("send error", server_port);
     }
     close(my_udp_s);
     return NULL;
+        
 }
 void *thr_func_client(void *input)
 {
@@ -142,6 +161,7 @@ void *thr_func_client(void *input)
     
     printf("Thread #%i is created\n", id);
     
+    
     //ont thread per time to connect to main server        
     pthread_mutex_lock(&m1);
     udp_s = connect_server(AF_INET, SOCK_DGRAM, MAIN_SERVER_PORT);
@@ -154,23 +174,22 @@ void *thr_func_client(void *input)
     printf("Client %i: %s\n", id, in_buf);
     close(udp_s);  // close coonection to main server
     // make new server port
-    server_port = MAIN_SERVER_PORT + atoi(in_buf) +1;
+    server_port = atoi(in_buf);
 
     // connect to new server
     udp_s = connect_server(AF_INET, SOCK_DGRAM, server_port);
-    //type 'exit' to exit
+    
     fgets(out_buf, sizeof(out_buf), stdin);
     if (send(udp_s, out_buf, sizeof(out_buf), 0) == -1)
-        handle_error_int("2nd send error", id); 
-
-    while (1) {
+        handle_error_int("2nd send error", id);
         
+    while (1) {
         int recv_bytes = recv(udp_s, in_buf, sizeof(in_buf), 0);
         if (recv_bytes == -1 || recv_bytes == 0) {
                 printf("Client №%i is closed\n", id);
                 break;
         }
-        printf("[MSG]: %s\n", in_buf);
+        printf("[MSG%i]: %s\n", id, in_buf);
     }
     close(udp_s);
     exit(0);

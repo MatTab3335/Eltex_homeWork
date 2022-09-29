@@ -1,7 +1,8 @@
-/* tcp server - scheme #2 - main server creates a pull of
- * thread servers to process clients - if number of clients > pull =>
- * create new servers and delete them if its not used. When thread is free
- * it tells main server about that and next client will use thi thread
+/* udp server - scheme #3 - main server creates a pull of
+ * thread servers to process clients and queue, in that queue server 
+ * puts a descriptor of new client - free server take it, tells main 
+ * server that it has taken the client, server tells client new server
+ * to connect, finally they start communication
 */
 #include "functions.h"
 
@@ -9,7 +10,7 @@
 int main(int argc, char *argv[])
 {
     // sockets variables
-    int udp_s_s, udp_s_с;
+    int udp_s_s, tcp_s_c;
     struct sockaddr_in client_addr;
     socklen_t client_addr_size;
     char in_buf[256] = {};
@@ -18,6 +19,9 @@ int main(int argc, char *argv[])
     n_of_clients = 0;
     n_of_threads = INIT_THR_NUM;
     int *serv_idx;
+    //
+    mqd_t qdes_server, qdes_threads;   // queue descriptors
+    struct mq_attr attr;
  
     // register signals Ctrl+c
     signal(SIGINT, SignalHandler);
@@ -31,6 +35,18 @@ int main(int argc, char *argv[])
     thread_list = allocate(thread_list, n_of_threads);
     // create main server
     udp_s_s = create_server(AF_INET, SOCK_DGRAM, MAIN_SERVER_PORT);
+    // fill attributes to queue
+    attr.mq_flags = 0;
+    attr.mq_maxmsg = MAX_MESSAGES;
+    attr.mq_msgsize = MAX_MSG_SIZE;
+    attr.mq_curmsgs = 0;
+    // open queues
+    if ((qdes_server = mq_open (SERVER_QUEUE_NAME, 
+        O_RDONLY | O_CREAT, QUEUE_PERMISSIONS, &attr)) == -1) 
+        handle_error("mq_open");
+    if ((qdes_threads = mq_open (THREADS_QUEUE_NAME, 
+        O_WRONLY | O_CREAT, QUEUE_PERMISSIONS, &attr)) == -1) 
+        handle_error("mq_open");
 	
 	memset(&client_addr, 0, sizeof(struct sockaddr_in)); //clear
     client_addr_size = sizeof(struct sockaddr_in);
@@ -41,51 +57,40 @@ int main(int argc, char *argv[])
         pthread_create(&thread_list[i], NULL, thr_func, (void *) &serv_idx[i]);
         usleep(10000);
     }
-    printf("Pull is ready\n");
+    printf("Pull is ready, %i threads are ready to accept clients\n", n_of_threads);
 
     while (1) {     
+        char temp[256] = {};
         // get msg from new client
 		int recv_bytes = recvfrom(udp_s_s, in_buf, sizeof(in_buf), 0, 
                 (struct sockaddr *) &client_addr, &client_addr_size);
-        if (recv_bytes == -1 || recv_bytes == 0) {
-                printf("Main server is closed\n");
-                exit(1);
-        }
-
+        if (recv_bytes == -1 || recv_bytes == 0)
+                handle_error("Main server is closed\n");
+            
         n_of_clients++;
         printf("Client № %i \n", n_of_clients - 1);
-        
-        // increase number of servers
-        if (n_of_clients >= n_of_threads) {
-            n_of_threads += INIT_THR_NUM;
-            thread_list = reallocate(thread_list, n_of_threads);
-            serv_stat = realloc(serv_stat, n_of_threads * sizeof(char));
-            serv_idx = realloc(serv_idx, n_of_threads * sizeof(int));
-            //increase pull of server/threads
-			for (int i = n_of_clients; i < n_of_threads; i++) {
-				serv_idx[i] = i;
-				// printf("idx = %i\n", serv_idx[i]);
-				pthread_create(&thread_list[i], NULL, thr_func, (void *) &serv_idx[i]);
-				usleep(10000);
-			}
-            printf("N of servers increased: %i\n", n_of_threads);
-        }
-
-        // check what server is not busy, then send to new client id of this server
-        for (int i = 0; i < n_of_threads; i++) {
-            if (serv_stat[i] == 0) {
-				serv_stat[i] = 1;
-                sprintf(out_buf, "%i", i);
-                if (sendto(udp_s_s, out_buf, sizeof(out_buf), 0,
-                    (struct sockaddr *) &client_addr, client_addr_size) == -1)
-                    handle_error("main send error");
-                break;
-            }
-        } 
+        // put to threads queue client info
+        sprintf(temp, "%i", n_of_clients);
+        if (mq_send (qdes_threads, temp, strlen(temp) + 1, 0) == -1)
+            handle_error("Server: Not able to send message to queue");
+        // get the port of server, which accepted client
+        if (mq_receive (qdes_server, in_buf, MSG_BUFFER_SIZE, NULL) == -1)
+            handle_error("Server: Not able to get message from queue");
+        // send to client info about new server
+        if (sendto(udp_s_s, in_buf, sizeof(in_buf), 0,
+            (struct sockaddr *) &client_addr, client_addr_size) == -1)
+            handle_error("main send error");
+        // clear client struct    
         memset(&client_addr, 0, sizeof(struct sockaddr_in));
-            client_addr_size = sizeof(struct sockaddr_in);   
-        
+            client_addr_size = sizeof(struct sockaddr_in);    
+            
     }
     
+    if (mq_close (qdes_server) == -1) 
+        handle_error("Main server: mq_close");
+    printf ("Server: Queue is closed\n");
+    if (mq_unlink (SERVER_QUEUE_NAME) == -1) 
+        handle_error("Main server: mq_unlink");
+    printf ("Server: Queue is removed\n");
     exit(0);
 }

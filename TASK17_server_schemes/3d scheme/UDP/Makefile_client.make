@@ -1,7 +1,7 @@
 all: client
 
 client: udp_client.o functions.o
-	gcc udp_client.o functions.o -o client -lpthread
+	gcc udp_client.o functions.o -o client -lpthread -lrt
 
 udp_client.o: udp_client.c
 	gcc -c udp_client.c

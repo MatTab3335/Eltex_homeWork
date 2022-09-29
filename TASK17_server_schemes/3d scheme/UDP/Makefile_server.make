@@ -1,7 +1,7 @@
-all: 2nd_scheme_udp
+all: 3d_scheme_udp
 
-2nd_scheme_udp: udp_server.o functions.o
-	gcc udp_server.o functions.o -o 2nd_scheme_udp -lpthread
+3d_scheme_udp: udp_server.o functions.o
+	gcc udp_server.o functions.o -o 3d_scheme_udp -lpthread -lrt
 
 udp_server.o: udp_server.c
 	gcc -c udp_server.c
@@ -10,4 +10,4 @@ functions.o: functions.c
 	gcc -c functions.c
 
 clean:
-	rm -rf *.0 2nd_scheme_udp
+	rm -rf *.0 3d_scheme_udp
