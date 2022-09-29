@@ -16,8 +16,8 @@ int main(int argc, char *argv[])
     for (int i = 0; i < THR_N; i++) {
         thr_idx[i] = i;
         pthread_create(&thr_list[i], NULL, thr_func_client, (void *) &thr_idx[i]);
-        // getchar();
-        usleep(70000);
+        getchar();
+        // usleep(70000);
     }
 }
 
