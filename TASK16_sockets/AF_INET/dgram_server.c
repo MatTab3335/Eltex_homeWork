@@ -60,5 +60,11 @@ int main(int argc, char *argv[])
     
     sendto(udp_s_s, in_buf, sizeof(in_buf), MSG_CONFIRM,
                 (struct sockaddr *) &client_addr, client_addr_size);
+                
+    while(1) {
+        recvfrom(udp_s_s, in_buf, sizeof(in_buf), MSG_WAITALL, 
+                (struct sockaddr *) &client_addr, &client_addr_size);
+        printf("[MSG]: %s\n", in_buf);
+    }
 
 }

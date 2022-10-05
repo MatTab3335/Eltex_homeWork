@@ -44,6 +44,17 @@ int main(int argc, char *argv[])
                 (struct sockaddr *) &server_addr, &server_addr_size);
 
     printf("[MSG]: %s\n", in_buf);
+    
+    while(1) {
+        static int i = 0;
+        char out_buf[256] = {};
+        
+        sprintf(out_buf, "%i", i);
+        sendto(fd, out_buf, sizeof(out_buf), 0,
+                (struct sockaddr *) &server_addr, server_addr_size);
+        usleep(500000);
+        i++;
+    }
 
     /* Code to deal with incoming connection(s)... */
 
