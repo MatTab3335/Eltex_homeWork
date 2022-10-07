@@ -12,7 +12,8 @@
 int main()
 {
 	int fd;
-	char buf[65535] = {};
+	char buf[2056] = {};
+	char *ptr = buf;
 	struct sockaddr_in addr;
 	
 	fd = socket(AF_INET, SOCK_RAW, IPPROTO_UDP);
@@ -28,8 +29,9 @@ int main()
 		recvbytes = recvfrom(fd, buf, sizeof(buf), 0, 
                 (struct sockaddr *) &addr, &addr_size);
         if (recvbytes < 0) handle_error("recv");
+        ptr = buf + 28;
         printf("Bytes =  %i\n", recvbytes);
-        printf("[MSG %i] %s\n", i++, buf);
+        printf("[MSG %i] %s\n", i++, ptr);
 	}
 	exit(0);
 }
