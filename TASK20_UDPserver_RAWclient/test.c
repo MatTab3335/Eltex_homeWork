@@ -40,9 +40,16 @@ unsigned short csum(unsigned short *ptr,int nbytes)
 int main (void)
 {
 	//Create a raw socket
-	int s = socket (PF_INET, SOCK_RAW, IPPROTO_UDP);
+	int s = socket (AF_INET, SOCK_RAW, IPPROTO_UDP);
 	if(s == -1)
 		handle_error("socket");
+		
+	//IP_HDRINCL to tell the kernel that headers are included in the packet
+	int one = 1;
+	const int *val = &one;
+	
+	if (setsockopt (s, IPPROTO_IP, IP_HDRINCL, val, sizeof (one)) < 0)
+		handle_error("Error setting IP_HDRINCL");
 	
 	//Datagram to represent the packet
 	char datagram[4096] , source_ip[32] , *data , *pseudogram;
@@ -71,17 +78,15 @@ int main (void)
 	iph->ihl = 5;
 	iph->version = 4;
 	iph->tos = 0;
-	iph->tot_len = sizeof(struct iphdr) + sizeof(struct udphdr) + strlen(data);
-	iph->id = htonl(54321);	//Id of this packet
+	iph->tot_len = 0; 	//Set to 0 to let system fill it
+	iph->id = 0;		//Set to 0 to let system fill it
 	iph->frag_off = 0;
 	iph->ttl = 255;
 	iph->protocol = IPPROTO_UDP;
-	iph->check = 0;		//Set to 0 before calculating checksum
-	iph->saddr = inet_addr(source_ip);	//Spoof the source ip address
+	iph->check = 0;		//Set to 0 to let system fill it
+	iph->saddr = 0;		//Set to 0 to let system fill it
 	iph->daddr = sin.sin_addr.s_addr;
 	
-	//Ip checksum
-	iph->check = csum ((unsigned short *) datagram, 20);
 	
 	//UDP Header
 	udph->source = htons(5005);
@@ -90,17 +95,12 @@ int main (void)
 	printf("UDP header length = %i\n", udph->uh_ulen);
 	udph->check = 0;
 	
-	//IP_HDRINCL to tell the kernel that headers are included in the packet
-	int one = 1;
-	const int *val = &one;
 	
-	if (setsockopt (s, IPPROTO_IP, IP_HDRINCL, val, sizeof (one)) < 0)
-		handle_error("Error setting IP_HDRINCL");
 
 	while (1)
 	{
 		//Send the packet
-		if (sendto (s, datagram, iph->tot_len ,	0, (struct sockaddr *) &sin, sizeof (sin)) < 0)
+		if (sendto (s, datagram, sizeof(datagram),	0, (struct sockaddr *) &sin, sizeof (sin)) < 0)
 			perror("sendto failed");
 		else
 			printf ("Packet Send. Length : %d \n" , iph->tot_len);
