@@ -52,7 +52,7 @@ int main (void)
 		handle_error("Error setting IP_HDRINCL");
 	
 	//Datagram to represent the packet
-	char datagram[4096] , source_ip[32] , *data , *pseudogram;
+	char datagram[4096], *data;
 	
 	//zero out the packet buffer
 	memset (datagram, 0, 4096);
@@ -69,9 +69,8 @@ int main (void)
 	strcpy(data , "ABCDEFGHIJKLMNOPQRSTUVWXYZ");
 	
 	//some address resolution
-	strcpy(source_ip , "127.0.0.1");
 	sin.sin_family = AF_INET;
-	sin.sin_port = htons(SERVER_PORT);
+	sin.sin_port = 0;
 	sin.sin_addr.s_addr = inet_addr ("127.0.0.1");
 	
 	//Fill in the IP Header
@@ -92,7 +91,7 @@ int main (void)
 	udph->source = htons(5005);
 	udph->dest = htons(SERVER_PORT);
 	udph->len = sizeof(struct udphdr) + strlen(data);
-	printf("UDP header length = %i\n", udph->uh_ulen);
+	printf("UDP header length = %i\n", udph->len);
 	udph->check = 0;
 	
 	
@@ -103,7 +102,7 @@ int main (void)
 		if (sendto (s, datagram, sizeof(datagram),	0, (struct sockaddr *) &sin, sizeof (sin)) < 0)
 			perror("sendto failed");
 		else
-			printf ("Packet Send. Length : %d \n" , iph->tot_len);
+			printf ("Packet Send \n");
         // sleep for 1 seconds
         sleep(1);
 	}
