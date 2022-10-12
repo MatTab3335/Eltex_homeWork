@@ -36,7 +36,7 @@ int main (void)
 	
 	//some address resolution
 	sin.sin_family = AF_INET;
-	sin.sin_port = 0;
+	sin.sin_port = htons(SERVER_PORT);
 	sin.sin_addr.s_addr = inet_addr ("127.0.0.1");
 		
 	//UDP Header
@@ -51,7 +51,7 @@ int main (void)
 	while (1)
 	{
 		//Send the packet
-		if (sendto(s, datagram, sizeof(datagram),	0, (struct sockaddr *) &sin, sizeof (sin)) < 0)
+		if (sendto(s, datagram, 20+8+strlen(data),	0, (struct sockaddr *) &sin, sizeof (sin)) < 0)
 			perror("sendto failed");
 		else
 			printf ("Packet Send \n");

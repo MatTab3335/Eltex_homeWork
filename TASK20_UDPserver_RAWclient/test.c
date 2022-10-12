@@ -46,7 +46,7 @@ int main (void)
 	
 	//some address resolution
 	sin.sin_family = AF_INET;
-	sin.sin_port = 0;
+	sin.sin_port = htons(SERVER_PORT);
 	sin.sin_addr.s_addr = inet_addr ("127.0.0.1");
 	
 	//Fill in the IP Header
