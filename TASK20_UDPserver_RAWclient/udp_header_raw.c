@@ -19,50 +19,26 @@ int main (void)
 	int s = socket (AF_INET, SOCK_RAW, IPPROTO_UDP);
 	if(s == -1)
 		handle_error("socket");
-		
-	//IP_HDRINCL to tell the kernel that headers are included in the packet
-	int one = 1;
-	const int *val = &one;
-	
-	if (setsockopt (s, IPPROTO_IP, IP_HDRINCL, val, sizeof (one)) < 0)
-		handle_error("Error setting IP_HDRINCL");
 	
 	//Datagram to represent the packet
 	char datagram[4096], *data;
 	
 	//zero out the packet buffer
 	memset (datagram, 0, 4096);
-	
-	//IP header
-	struct iphdr *iph = (struct iphdr *) datagram;
-	
+		
 	//UDP header
-	struct udphdr *udph = (struct udphdr *)(datagram + sizeof (struct iphdr));
+	struct udphdr *udph = (struct udphdr *)datagram;
 	struct sockaddr_in sin;
 
 	//Data part
-	data = datagram + sizeof(struct iphdr) + sizeof(struct udphdr);
+	data = datagram + sizeof(struct udphdr);
 	strcpy(data , "ABCDEFGHIJKLMNOPQRSTUVWXYZ");
 	
 	//some address resolution
 	sin.sin_family = AF_INET;
 	sin.sin_port = 0;
 	sin.sin_addr.s_addr = inet_addr ("127.0.0.1");
-	
-	//Fill in the IP Header
-	iph->ihl = 5;
-	iph->version = 4;
-	iph->tos = 0;
-	iph->tot_len = 0; 	//Set to 0 to let system fill it
-	iph->id = 0;		//Set to 0 to let system fill it
-	iph->frag_off = 0;
-	iph->ttl = 255;
-	iph->protocol = IPPROTO_UDP;
-	iph->check = 0;		//Set to 0 to let system fill it
-	iph->saddr = 0;		//Set to 0 to let system fill it
-	iph->daddr = sin.sin_addr.s_addr;
-	
-	
+		
 	//UDP Header
 	udph->source = htons(5005);
 	udph->dest = htons(SERVER_PORT);
