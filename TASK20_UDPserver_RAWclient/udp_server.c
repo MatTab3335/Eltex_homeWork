@@ -55,7 +55,7 @@ int main(int argc, char *argv[])
     while(1) {
         recvfrom(udp_s_s, in_buf, sizeof(in_buf), 0, 
                 (struct sockaddr *) &client_addr, &client_addr_size);
-        ptr = in_buf + 28;
+        ptr = in_buf;
         printf("[MSG]: %s\n", ptr);
     }
 

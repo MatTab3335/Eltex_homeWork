@@ -42,8 +42,7 @@ int main (void)
 	//UDP Header
 	udph->source = htons(5005);
 	udph->dest = htons(SERVER_PORT);
-	udph->len = sizeof(struct udphdr) + strlen(data);
-	printf("UDP header length = %i\n", udph->len);
+	udph->len = htons(sizeof(struct udphdr) + strlen(data));
 	udph->check = 0;		//no need in IPv4
 	
 	
