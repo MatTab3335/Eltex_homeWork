@@ -15,8 +15,10 @@
     do { perror(msg); exit(EXIT_FAILURE); } while (0)
 
 #define SERVER_PORT 5000
+
 #define MY_IP "192.168.0.105"
 #define MY_MAC "00:d8:61:88:7c:4a"
+
 #define SERV_IP "192.168.0.103"
 #define SERV_MAC "b8:27:eb:d6:37:21"
 
@@ -47,6 +49,7 @@ int main (void)
 							+ sizeof(struct iphdr));
 	memset (udph, 0, sizeof(struct udphdr));
 	struct sockaddr_ll addr_ll;
+	memset (&addr_ll, 0, sizeof(struct sockaddr_ll));
 
 	
 	//Data part
@@ -54,25 +57,39 @@ int main (void)
 	strcpy(data , "ABCDEFGHIJKLMNOPQRSTUVWXYZ");
 	
 	//some address resolution
-	addr_ll.sll_family = AF_PACKET;
-	addr_ll.sll_ifindex = htons(if_nametoindex("enp3s0"));
+	addr_ll.sll_family = htons(AF_PACKET);
+	addr_ll.sll_ifindex = htonl(if_nametoindex("enp3s0"));
 	addr_ll.sll_halen = htons(6);
+	addr_ll.sll_protocol = htons(ETHERTYPE_IP);
 	eth_addr = ether_aton(SERV_MAC);
-	memcpy(addr_ll.sll_addr, eth_addr, sizeof(eth_addr));
+	for (int i = 0; i < ETH_ALEN; i++) 
+		addr_ll.sll_addr[i] = eth_addr->ether_addr_octet[i];
+
+	printf("Address:\n");
+	printf("addr_ll.sll_family: %X\n", addr_ll.sll_family);
+	printf("addr_ll.sll_ifindex: %X\n", addr_ll.sll_ifindex);
+	printf("addr_ll.sll_halen: %X\n", addr_ll.sll_halen);
+	printf("addr_ll.sll_protocol: %X\n", addr_ll.sll_protocol);
+	printf("addr_ll.sll_addr: ");
+	for (int i = 0; i < ETH_ALEN; i++)
+		printf("%X", addr_ll.sll_addr[i]);
 	
 	//Ethernet header
+	for (int i = 0; i < ETH_ALEN; i++) 
+		ethh->ether_dhost[i] = eth_addr->ether_addr_octet[i];
+
 	eth_addr = ether_aton(MY_MAC);
-	memcpy(ethh->ether_dhost, eth_addr, sizeof(eth_addr));
-	eth_addr = ether_aton(SERV_MAC);
-	memcpy(ethh->ether_shost, eth_addr, sizeof(eth_addr));
-	ethh->ether_type = htons(ETH_P_IP);
+	for (int i = 0; i < ETH_ALEN; i++) 
+		ethh->ether_shost[i] = eth_addr->ether_addr_octet[i];
+
+	ethh->ether_type = htons(ETHERTYPE_IP);
 
 	//Fill in the IP Header
 	iph->ihl = 5;
 	iph->version = 4;
 	iph->tos = 0;
-	iph->tot_len = sizeof(struct iphdr) + sizeof(struct udphdr); 
-	iph->id = htons(12345);
+	iph->tot_len = htons(sizeof(struct iphdr) + sizeof(struct udphdr)); 
+	iph->id = htons(1234);
 	iph->frag_off = 0;
 	iph->ttl = 255;
 	iph->protocol = IPPROTO_UDP;
@@ -89,11 +106,13 @@ int main (void)
 	
 	// calculate the checksum for integrity
   	iph->check = csum(iph);
+  	printf("\nchecksum = %X\n", iph->check);
 
 	while (1)
 	{
 		//Send the packet
-		if (sendto(s, datagram, strlen(datagram),	0, (struct sockaddr *) &addr_ll, sizeof (addr_ll)) < 0)
+		if (sendto(s, datagram, strlen(datagram),0, (struct sockaddr *) &addr_ll, 
+					sizeof (struct sockaddr_ll)) < 0)
 			perror("sendto failed");
 		else
 			printf ("Packet Send \n");
