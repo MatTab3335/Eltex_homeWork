@@ -57,6 +57,8 @@ int main(int argc, char *argv[])
                 (struct sockaddr *) &client_addr, &client_addr_size);
         ptr = in_buf;
         printf("[MSG]: %s\n", ptr);
+        sendto(udp_s_s, "Accepted", sizeof("Accepted"), 0, 
+                (struct sockaddr *) &client_addr, client_addr_size);
     }
 
 }

@@ -15,6 +15,7 @@
 
 int main (void)
 {
+	char in_buf[255] = {};
 	//Create a raw socket
 	int s = socket (AF_INET, SOCK_RAW, IPPROTO_UDP);
 	if(s == -1)
@@ -45,7 +46,7 @@ int main (void)
 	udph->len = htons(sizeof(struct udphdr) + strlen(data));
 	udph->check = 0;		//no need in IPv4
 	
-	
+	int sin_size = sizeof(sin);
 
 	while (1)
 	{
@@ -54,6 +55,14 @@ int main (void)
 			perror("sendto failed");
 		else
 			printf ("Packet Send \n");
+			
+		int recv_bytes = recvfrom(s, in_buf, sizeof(in_buf), 0, 
+               (struct sockaddr *) &sin, &sin_size);
+        if (recv_bytes == -1 || recv_bytes == 0) {
+                printf("Client is closed\n");
+                exit(1);
+        }
+        printf("[MSG]: %s\n", in_buf);
         // sleep for 1 seconds
         sleep(1);
 	}
