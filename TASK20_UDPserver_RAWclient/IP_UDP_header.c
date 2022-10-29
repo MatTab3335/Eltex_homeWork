@@ -15,6 +15,7 @@
 
 int main (void)
 {
+	char in_buf[256] = {};
 	//Create a raw socket
 	int s = socket (AF_INET, SOCK_RAW, IPPROTO_UDP);
 	if(s == -1)
@@ -47,7 +48,7 @@ int main (void)
 	//some address resolution
 	sin.sin_family = AF_INET;
 	sin.sin_port = htons(SERVER_PORT);
-	sin.sin_addr.s_addr = inet_addr ("127.0.0.1");
+	sin.sin_addr.s_addr = inet_addr ("192.168.0.106");
 	
 	//Fill in the IP Header
 	iph->ihl = 5;
@@ -70,16 +71,25 @@ int main (void)
 	udph->check = 0;		//no need in IPv4
 	
 	
+	int sin_size = sizeof(sin);
 
 	while (1)
 	{
 		//Send the packet
-		if (sendto(s, datagram, sizeof(datagram),	0, (struct sockaddr *) &sin, sizeof (sin)) < 0)
+		if (sendto(s, datagram, strlen(data)+28,	0, (struct sockaddr *) &sin, sizeof (sin)) < 0)
 			perror("sendto failed");
 		else
 			printf ("Packet Send \n");
         // sleep for 1 seconds
         sleep(1);
+
+        int recv_bytes = recvfrom(s, in_buf, sizeof(in_buf), 0, 
+               (struct sockaddr *) &sin, &sin_size);
+        if (recv_bytes == -1 || recv_bytes == 0) {
+                printf("Client is closed\n");
+                exit(1);
+        }
+        printf("[MSG]: %s\n", in_buf+28);
 	}
 	
 	return 0;
