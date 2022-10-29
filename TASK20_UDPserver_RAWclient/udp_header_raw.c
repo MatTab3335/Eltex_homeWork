@@ -38,7 +38,7 @@ int main (void)
 	//some address resolution
 	sin.sin_family = AF_INET;
 	sin.sin_port = htons(SERVER_PORT);
-	sin.sin_addr.s_addr = inet_addr ("127.0.0.1");
+	sin.sin_addr.s_addr = inet_addr ("192.168.0.106");
 		
 	//UDP Header
 	udph->source = htons(5005);
@@ -51,7 +51,7 @@ int main (void)
 	while (1)
 	{
 		//Send the packet
-		if (sendto(s, datagram, 20+8+strlen(data),	0, (struct sockaddr *) &sin, sizeof (sin)) < 0)
+		if (sendto(s, datagram, 8+strlen(data),	0, (struct sockaddr *) &sin, sizeof (sin)) < 0)
 			perror("sendto failed");
 		else
 			printf ("Packet Send \n");
@@ -62,7 +62,7 @@ int main (void)
                 printf("Client is closed\n");
                 exit(1);
         }
-        printf("[MSG]: %s\n", in_buf);
+        printf("[MSG]: %s\n", in_buf+28);
         // sleep for 1 seconds
         sleep(1);
 	}
