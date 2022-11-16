@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
     memset(&my_addr, 0, sizeof(struct sockaddr_in));
                         
     my_addr.sin_family = AF_INET;
-    my_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    my_addr.sin_addr.s_addr = inet_addr("192.168.0.103");
     my_addr.sin_port = htons(SERVER_PORT);
 
 
