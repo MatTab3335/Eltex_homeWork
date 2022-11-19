@@ -11,7 +11,7 @@ static int major = 0;
 static rwlock_t lock;
 static char test_string[15] = "Hello\0";
 
-ssize_t test_read(struct file *fd, char __user *, size_t size, loff_t *off)
+ssize_t test_read(struct file *fd, char __user *buff, size_t size, loff_t *off)
 {
 	size_t rc;
 	
@@ -22,7 +22,7 @@ ssize_t test_read(struct file *fd, char __user *, size_t size, loff_t *off)
 	return rc;
 }
 
-ssize_t test_write(struct file *fd, char __user *, size_t size, loff_t *off)
+ssize_t test_write(struct file *fd, const char __user *buff, size_t size, loff_t *off)
 {
 	size_t rc;
 	
@@ -44,7 +44,7 @@ static struct file_operations fops = {
 
 int init_module(void)
 {
-	int retval = 0 ;
+	//int retval = 0 ;
 	
 	pr_info("My test module loaded!\n");
 	rwlock_init(&lock);
@@ -61,3 +61,4 @@ void cleanup_module(void)
 	unregister_chrdev(major, "test");
 	pr_info("My tset module unloaded!\n");
 }
+MODULE_LICENSE("GPL");
